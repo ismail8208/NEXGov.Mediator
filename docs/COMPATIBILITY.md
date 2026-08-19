@@ -58,8 +58,8 @@ library declares as supported.
 | `IBaseRequest` | V1 Required | Verified | Common marker base for `IRequest` and `IRequest<TResponse>`. Implemented in MED-002. |
 | `IRequest` | V1 Required | Verified | Void-response request marker. Implemented in MED-002. |
 | `IRequest<TResponse>` | V1 Required | Verified | Response-returning request marker; covariant in `TResponse`. Implemented in MED-002. |
-| `IRequestHandler<TRequest>` | V1 Required | Not started | Handler for void-response requests. |
-| `IRequestHandler<TRequest, TResponse>` | V1 Required | Not started | Handler for response-returning requests. |
+| `IRequestHandler<TRequest>` | V1 Required | Verified | Handler for void-response requests; `TRequest` is contravariant. Implemented in MED-003. |
+| `IRequestHandler<TRequest, TResponse>` | V1 Required | Verified | Handler for response-returning requests; `TRequest` is contravariant. Implemented in MED-003. |
 | `ISender` | V1 Required | Not started | Send-only dispatch abstraction. |
 | `Send(...)` | V1 Required | Not started | Dispatches a request to its handler. |
 | `IPublisher` | V1 Required | Not started | Publish-only dispatch abstraction. |

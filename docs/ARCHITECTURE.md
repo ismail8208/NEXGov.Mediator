@@ -139,6 +139,43 @@ These extend the runtime dispatch principles above to the publish path.
   call and propagates unchanged (not wrapped) to the caller; handlers
   after the failing one do not run.
 
+## Pipeline principles
+
+Introduced in MED-007 alongside `RequestHandlerDelegate<TResponse>`,
+`IPipelineBehavior<TRequest, TResponse>`, and their integration into
+every `Send` dispatch path.
+
+- **Request pipelines wrap `Send` handler execution.** Every `Send` path
+  (generic response, generic void, and dynamic `Send(object)`) builds a
+  `RequestHandlerDelegate<TResponse>` chain terminating in the resolved
+  handler, then wraps it with every registered
+  `IPipelineBehavior<TRequest, TResponse>`.
+- **The first provider-ordered behavior is outermost.** If the service
+  provider returns behaviors `A, B, C`, execution is
+  `A.Before → B.Before → C.Before → Handler → C.After → B.After → A.After`.
+- **Behaviors are resolved per `Send`, from `IServiceProvider`**, exactly
+  like handlers; behavior instances are never cached, so DI-configured
+  lifetimes (scoped/transient/singleton) are always honored.
+- **Only dispatch metadata may be cached** — never a service provider, a
+  handler instance, or a behavior instance.
+- **Behaviors may short-circuit** by not invoking the `next` delegate;
+  when that happens, no further-nested behavior and no handler runs, and
+  the behavior's own return value becomes the pipeline's result.
+- **Behaviors may transform the response** returned by `next` before
+  returning it themselves.
+- **Cancellation flows through `RequestHandlerDelegate` according to the
+  public contract**: the token `Send` receives reaches the outermost
+  behavior; each behavior decides what token to pass to `next` (typically
+  the one it received, but it may deliberately substitute a different
+  one, which downstream behaviors and the handler then observe instead).
+- **Void (`IRequest`) pipelines reuse the same machinery internally**
+  against a non-public sentinel response type, not a public `Unit` type
+  — see `docs/COMPATIBILITY.md` for the resulting compatibility nuance
+  around closed-generic void-targeted behaviors.
+- **`Publish` does not use request pipeline behaviors.** Notification
+  dispatch (MED-006) is unaffected by `IPipelineBehavior`; the two
+  mechanisms are intentionally separate.
+
 ## Non-goals
 
 - Reproducing MediatR's internal class structure or implementation

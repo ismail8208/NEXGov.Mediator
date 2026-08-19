@@ -71,6 +71,41 @@ the request/handler pipeline, notification dispatch, and DI integration.
     full mediator surface at once. Foundation work (this repository
     structure) intentionally contains no mediator runtime behavior.
 
+## Runtime dispatch principles
+
+Introduced in MED-005 alongside the first real `Send` implementation
+(`Mediator : ISender`). These refine principles 5–8 above for the
+concrete dispatch path; they don't replace them.
+
+- **`IServiceProvider` is the runtime handler resolution boundary.**
+  `Mediator` resolves every handler through the `IServiceProvider` it was
+  constructed with. No other resolution mechanism (service locator,
+  static registry, reflection-based instantiation of handlers) is used.
+- **Handler instances are never stored in static caches.** A handler is
+  resolved fresh from the service provider on every dispatch, so
+  container-configured lifetimes (singleton, scoped, transient) are
+  always honored.
+- **Runtime dispatch metadata may be cached.** The reflection needed to
+  build a closed-generic dispatch wrapper for a concrete request type is
+  cached (keyed by request type), so it happens at most once per type,
+  not once per call.
+- **Cache entries must not capture `IServiceProvider`.** Cached dispatch
+  wrappers are stateless; the service provider is passed in on each call,
+  never stored on a cached object, so the same cache is safe to share
+  across multiple `Mediator` instances built from different containers.
+- **The concrete runtime request type controls handler resolution**, not
+  the compile-time/generic-parameter type of the reference used to call
+  `Send`. This matches how a request declared through a base type or
+  interface reference is still routed to the handler for its actual type.
+- **Pipelines will wrap handler execution in a later task.** MED-005's
+  dispatch path calls the resolved handler directly; pipeline behaviors
+  are not part of this stage.
+- **Dynamic dispatch must fail deterministically on ambiguous request
+  contracts.** If a request's concrete type implements more than one
+  closed `IRequest<TResponse>`, the object-typed `Send(object)` overload
+  throws rather than guessing; the generic `Send<TResponse>` overload has
+  no such ambiguity because the caller supplies `TResponse` explicitly.
+
 ## Non-goals
 
 - Reproducing MediatR's internal class structure or implementation

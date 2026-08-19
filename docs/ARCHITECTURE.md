@@ -176,6 +176,47 @@ every `Send` dispatch path.
   dispatch (MED-006) is unaffected by `IPipelineBehavior`; the two
   mechanisms are intentionally separate.
 
+## Processor principles
+
+Introduced in MED-008 alongside `IRequestPreProcessor<TRequest>`,
+`IRequestPostProcessor<TRequest, TResponse>`, and their standard
+`RequestPreProcessorBehavior<,>`/`RequestPostProcessorBehavior<,>`
+pipeline behaviors (namespace `NEXGov.Mediator.Pipeline`, mirroring
+MediatR's `MediatR.Pipeline`).
+
+- **Processors integrate through ordinary `IPipelineBehavior<,>`.**
+  `IRequestPreProcessor`/`IRequestPostProcessor` are not a separate
+  execution mechanism; they run only when their corresponding
+  `RequestPreProcessorBehavior<,>`/`RequestPostProcessorBehavior<,>` is
+  itself registered as a pipeline behavior.
+- **`Mediator` does not execute processors directly.** Neither `Send` nor
+  `RequestHandlerWrapper` has any special-cased knowledge of processors;
+  this keeps a future automatic-registration milestone free to compose
+  processor behaviors using the exact same model as any other behavior.
+- **Processor ordering follows pipeline registration order** — a
+  processor behavior's position (outermost, innermost, interleaved with
+  other behaviors) is determined entirely by where it's registered
+  relative to other `IPipelineBehavior<,>` registrations, not by any
+  special pre/post-specific ordering rule.
+- **Processors are resolved by DI through their behavior.**
+  `RequestPreProcessorBehavior<,>`/`RequestPostProcessorBehavior<,>`
+  resolve `IEnumerable<IRequestPreProcessor<TRequest>>` /
+  `IEnumerable<IRequestPostProcessor<TRequest, TResponse>>` from the
+  service provider on every invocation.
+- **Processor instances are never cached** — same rule as handlers and
+  behaviors; only dispatch/pipeline metadata may be cached, never a
+  service provider or resolved instance.
+- **Pre-processors execute sequentially, in resolution order, before
+  `next`.** Zero processors calls `next` directly; a processor exception
+  stops the chain and `next` never runs.
+- **Post-processors execute sequentially, in resolution order, only
+  after `next` completes successfully**, and the original response is
+  returned unchanged; if `next` throws, no post-processor runs, and a
+  post-processor exception stops later ones.
+- **`Publish` is unaffected.** Request processors participate only in the
+  `Send` pipeline; notification publishing (MED-006) has no concept of
+  pre/post-processors.
+
 ## Non-goals
 
 - Reproducing MediatR's internal class structure or implementation

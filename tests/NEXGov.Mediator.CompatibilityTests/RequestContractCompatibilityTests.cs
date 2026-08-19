@@ -4,7 +4,7 @@ namespace NEXGov.Mediator.CompatibilityTests;
 
 // Verifies the public API shape of the MED-002 request contracts matches
 // the compatibility surface documented in docs/COMPATIBILITY.md. These
-// tests assert against NEXGov.Mediator's + types only; they do not take
+// tests assert against NEXGov.Mediator's own types only; they do not take
 // a dependency on MediatR.
 public class RequestContractCompatibilityTests
 {

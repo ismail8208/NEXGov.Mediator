@@ -3,11 +3,11 @@ using NEXGov.Mediator.Internal;
 namespace NEXGov.Mediator;
 
 /// <summary>
-/// Default <see cref="ISender"/> implementation that resolves request
-/// handlers from an <see cref="IServiceProvider"/> at the time each
-/// request is sent.
+/// Default <see cref="IMediator"/> implementation that resolves request
+/// handlers and notification handlers from an <see cref="IServiceProvider"/>
+/// at the time each request is sent or notification is published.
 /// </summary>
-public class Mediator : ISender
+public class Mediator : IMediator
 {
     private readonly IServiceProvider _serviceProvider;
 
@@ -95,6 +95,37 @@ public class Mediator : ISender
         throw new ArgumentException(
             $"'{concreteType.FullName}' is not a supported request. It must implement IRequest or IRequest<TResponse>.",
             nameof(request));
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentNullException"><paramref name="notification"/> is <see langword="null"/>.</exception>
+    public async Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
+        where TNotification : INotification
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+
+        var wrapper = NotificationHandlerWrapperCache.GetWrapper(notification.GetType());
+
+        await wrapper.Handle(notification, _serviceProvider, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentNullException"><paramref name="notification"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="notification"/> does not implement <see cref="INotification"/>.</exception>
+    public async Task Publish(object notification, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+
+        if (notification is not INotification)
+        {
+            throw new ArgumentException(
+                $"'{notification.GetType().FullName}' is not a supported notification. It must implement INotification.",
+                nameof(notification));
+        }
+
+        var wrapper = NotificationHandlerWrapperCache.GetWrapper(notification.GetType());
+
+        await wrapper.Handle(notification, _serviceProvider, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>

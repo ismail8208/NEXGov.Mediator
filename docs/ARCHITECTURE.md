@@ -106,6 +106,39 @@ concrete dispatch path; they don't replace them.
   throws rather than guessing; the generic `Send<TResponse>` overload has
   no such ambiguity because the caller supplies `TResponse` explicitly.
 
+## Notification publishing principles
+
+Introduced in MED-006 alongside `INotification`, `INotificationHandler<TNotification>`,
+`IPublisher`, `IMediator`, and `Mediator`'s `Publish` implementation.
+These extend the runtime dispatch principles above to the publish path.
+
+- **`IMediator` combines `ISender` and `IPublisher`**, adding no members
+  of its own; `Mediator` implements `IMediator` and is therefore usable
+  as any of `ISender`, `IPublisher`, or `IMediator`.
+- **`Send` requires exactly one matching request handler**; `Publish`
+  permits **zero to many** matching notification handlers. A notification
+  with no registered handlers is not an error.
+- **Notification handlers are resolved per publish operation**, via
+  `IServiceProvider`'s `IEnumerable<INotificationHandler<TNotification>>`
+  resolution, for the concrete runtime notification type — the same
+  "concrete type controls resolution" rule `Send` follows.
+- **Notification dispatch metadata may be cached; handler instances may
+  not.** As with request dispatch, the reflection needed to build a
+  closed-generic notification wrapper is cached by notification type; the
+  cache never stores a service provider or handler instance, so DI
+  lifetimes are respected on every publish.
+- **Default MED-006 publishing is sequential**, awaiting each handler
+  before starting the next — not `Task.WhenAll` — for deterministic
+  execution, predictable exception propagation, and safety with scoped
+  services. A configurable/parallel publishing strategy is not part of
+  MED-006.
+- **Provider registration order is preserved.** Handlers run in the order
+  `IServiceProvider` returns them; they are never reordered (e.g.
+  alphabetically or by type name).
+- **An exception from any handler stops sequential publishing** for that
+  call and propagates unchanged (not wrapped) to the caller; handlers
+  after the failing one do not run.
+
 ## Non-goals
 
 - Reproducing MediatR's internal class structure or implementation

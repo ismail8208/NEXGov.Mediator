@@ -2,10 +2,9 @@ using System.Reflection;
 
 namespace NEXGov.Mediator.CompatibilityTests;
 
-// Verifies the public API shape of the MED-005 Mediator runtime class,
-// and that internal dispatch infrastructure is not accidentally exposed
-// as public API. IMediator is intentionally not asserted here — it does
-// not exist yet.
+// Verifies the public API shape of the Mediator runtime class, and that
+// internal dispatch infrastructure is not accidentally exposed as public
+// API.
 public class MediatorCompatibilityTests
 {
     [Fact]
@@ -19,9 +18,21 @@ public class MediatorCompatibilityTests
     }
 
     [Fact]
-    public void Mediator_ImplementsISender()
+    public void Mediator_ImplementsIMediator()
     {
-        Assert.Contains(typeof(ISender), typeof(Mediator).GetInterfaces());
+        Assert.Contains(typeof(IMediator), typeof(Mediator).GetInterfaces());
+    }
+
+    [Fact]
+    public void Mediator_ImplementsISender_AndIPublisher_ThroughIMediator()
+    {
+        // Implementing IMediator (which inherits ISender and IPublisher)
+        // must make Mediator instances assignable to both, exactly as it
+        // was directly assignable to ISender alone before MED-006.
+        var interfaces = typeof(Mediator).GetInterfaces();
+
+        Assert.Contains(typeof(ISender), interfaces);
+        Assert.Contains(typeof(IPublisher), interfaces);
     }
 
     [Fact]

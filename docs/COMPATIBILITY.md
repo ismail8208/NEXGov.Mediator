@@ -50,6 +50,7 @@ library declares as supported.
 | **Not started** | No implementation exists yet. |
 | **In progress** | Implementation exists but is not yet covered by compatibility tests. |
 | **Verified** | Covered by passing tests in `NEXGov.Mediator.CompatibilityTests`. |
+| **Verified (API contract only)** | The public type/method shape (name, signature, generics, constraints) is covered by passing reflection-based tests, but no runtime dispatch/execution behind it exists yet. Used for members like `Send(...)` and `CreateStream(...)` whose interface shape can be verified independently of the mediator runtime that will eventually call them. Do not treat this as a behavioral compatibility guarantee. |
 
 ## Compatibility matrix
 
@@ -60,8 +61,8 @@ library declares as supported.
 | `IRequest<TResponse>` | V1 Required | Verified | Response-returning request marker; covariant in `TResponse`. Implemented in MED-002. |
 | `IRequestHandler<TRequest>` | V1 Required | Verified | Handler for void-response requests; `TRequest` is contravariant. Implemented in MED-003. |
 | `IRequestHandler<TRequest, TResponse>` | V1 Required | Verified | Handler for response-returning requests; `TRequest` is contravariant. Implemented in MED-003. |
-| `ISender` | V1 Required | Not started | Send-only dispatch abstraction. |
-| `Send(...)` | V1 Required | Not started | Dispatches a request to its handler. |
+| `ISender` | V1 Required | Verified | Send-only dispatch abstraction; contract shape only — see `Send(...)`/`CreateStream(...)` rows for runtime status. Implemented in MED-004. |
+| `Send(...)` | V1 Required | Verified (API contract only) | All three `Send` overloads exist with the correct signatures. **Runtime dispatch behavior is Not started / Later** — no handler resolution exists yet; calling any implementation is entirely up to that implementation, not a mediator runtime provided by this library. |
 | `IPublisher` | V1 Required | Not started | Publish-only dispatch abstraction. |
 | `Publish(...)` | V1 Required | Not started | Dispatches a notification to its handlers. |
 | `IMediator` | V1 Required | Not started | Combines `ISender` and `IPublisher`. |
@@ -73,10 +74,10 @@ library declares as supported.
 | `IRequestPostProcessor<TRequest, TResponse>` | V1 Extended | Not started | Runs after the handler. |
 | `IRequestExceptionHandler` | V1 Extended | Not started | Handles exceptions thrown by a handler. |
 | `IRequestExceptionAction` | V1 Extended | Not started | Reacts to exceptions thrown by a handler without suppressing them. |
-| `IStreamRequest<TResponse>` | V1 Extended | Not started | Marker for streaming requests. |
+| `IStreamRequest<TResponse>` | V1 Extended | Verified | Marker for streaming requests; covariant in `TResponse`. Brought forward and implemented in MED-004 as a compile-time prerequisite of the complete `ISender` API surface (`CreateStream` parameter types reference it) — not because streaming execution itself has moved up. Streaming execution (handlers, behaviors, dispatch) remains scheduled for the later streaming milestone. |
 | `IStreamRequestHandler<TRequest, TResponse>` | V1 Extended | Not started | Handler returning `IAsyncEnumerable<TResponse>`. |
 | `IStreamPipelineBehavior<TRequest, TResponse>` | V1 Extended | Not started | Middleware around stream request handling. |
-| `CreateStream(...)` | V1 Extended | Not started | Dispatches a stream request. |
+| `CreateStream(...)` | V1 Extended | Verified (API contract only) | Both `CreateStream` overloads exist on `ISender` with the correct signatures. **Runtime streaming behavior is Not started / Later** — no stream handler resolution or execution exists yet. |
 | `AddMediatR(...)` | V1 Required | Not started | DI registration entry point (NEXGov.Mediator-named equivalent). |
 | `RegisterServicesFromAssembly(...)` | V1 Required | Not started | Assembly-scanning registration option. |
 | `RegisterServicesFromAssemblies(...)` | V1 Required | Not started | Multi-assembly-scanning registration option. |

@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/NEXGov.Mediator.Benchmarks/NEXGov.Mediator.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/NEXGov.Mediator.Sample/NEXGov.Mediator.Sample.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/NEXGov.Mediator/NEXGov.Mediator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NEXGov.Mediator.CompatibilityTests/NEXGov.Mediator.CompatibilityTests.csproj" />
+    <Project Path="tests/NEXGov.Mediator.IntegrationTests/NEXGov.Mediator.IntegrationTests.csproj" />
+    <Project Path="tests/NEXGov.Mediator.UnitTests/NEXGov.Mediator.UnitTests.csproj" />
+  </Folder>
+</Solution>

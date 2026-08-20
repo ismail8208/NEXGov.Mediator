@@ -12,10 +12,10 @@ dispatch, notifications/`Publish`, pipeline behaviors, pre/post
 processors, exception handlers/actions, and dependency-injection
 registration (`AddMediatR` with assembly scanning, plus explicit
 `AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
-registration) are implemented and tested. Streaming request/handler/behavior
-contracts and runtime execution are implemented for manually-registered
-stream handlers/behaviors; automatic scanning/configuration for streaming
-is not implemented yet. Nothing in this repository has had a stable
+registration) are implemented and tested. Streaming (request/handler/behavior
+contracts, runtime execution, and `AddMediatR` scanning/`AddStreamBehavior`/
+`AddOpenStreamBehavior` registration) is implemented and tested for closed
+stream handlers/behaviors. Nothing in this repository has had a stable
 release; treat it as pre-release.
 
 ## Quick start
@@ -89,18 +89,46 @@ behavior targeting one specific request/response pair instead.
 `AddRequestPreProcessor`/`AddRequestPostProcessor` (and their
 `AddOpen*` variants) register pre/post processors the same way.
 
-**Streaming:** the request/handler/behavior contracts
-(`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,
-`IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`) are implemented,
-and `ISender.CreateStream(...)` runtime is available for **explicitly
-registered** stream handlers/behaviors. **Automatic scanning/configuration
-is pending** — `AddMediatR` does not yet discover `IStreamRequestHandler<,>`
-implementations, and there is no `AddStreamBehavior`/`AddOpenStreamBehavior`
-yet, so a stream handler/behavior must currently be registered manually
-(e.g. `services.AddTransient<IStreamRequestHandler<MyRequest, TResponse>, MyHandler>()`).
-See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture,
-including which parts of `AddMediatR` scanning currently register a
-service versus actually wire it into request execution.
+### Streaming requests
+
+`IStreamRequest<TResponse>`/`IStreamRequestHandler<,>` implementations are
+discovered by the same `AddMediatR` scanning as ordinary request handlers
+— no manual registration needed for a closed handler:
+
+```csharp
+var stream = mediator.CreateStream(new CountTo(3));
+
+await foreach (var number in stream)
+{
+    Console.WriteLine(number); // 1, 2, 3
+}
+
+public sealed record CountTo(int Max) : IStreamRequest<int>;
+
+public sealed class CountToHandler : IStreamRequestHandler<CountTo, int>
+{
+    public async IAsyncEnumerable<int> Handle(CountTo request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        for (var i = 1; i <= request.Max; i++)
+        {
+            yield return i;
+        }
+    }
+}
+```
+
+Stream pipeline behaviors follow the same explicit-opt-in model as
+ordinary pipeline behaviors — `AddStreamBehavior<T>()` registers a closed
+`IStreamPipelineBehavior<,>`, `AddOpenStreamBehavior(typeof(MyBehavior<,>))`
+registers an open one closed automatically per stream request/response
+pair, and `StreamHandlerDelegate<TResponse>` (the stream pipeline's
+continuation type) deliberately carries no `CancellationToken` parameter
+of its own — see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for why.
+
+**Not yet supported:** open-generic stream handlers under
+`RegisterGenericHandlers` (see "Generic request handlers" below — the
+same scope narrowing applies to streams). See
+[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture.
 
 ### Generic request handlers
 
@@ -190,10 +218,12 @@ is used as a compatibility reference.
       scope narrowing versus current MediatR)
 - [x] Void-request `Unit` typing and current handler-proximity exception
       ordering
-- [ ] Streaming requests (contracts and manually-registered runtime dispatch
-      implemented — `IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,
-      `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`,
-      `CreateStream(...)`; `AddMediatR` scanning/`AddStreamBehavior` pending)
+- [x] Streaming requests (`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,
+      `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`, `CreateStream(...)`
+      runtime, and `AddMediatR` scanning/`AddStreamBehavior`/`AddOpenStreamBehavior`
+      registration for closed stream handlers — generic stream-handler
+      expansion under `RegisterGenericHandlers` remains a documented gap,
+      see `docs/COMPATIBILITY-AUDIT.md`)
 - [ ] Compatibility test suite covering the V1 Required and V1 Extended
       surface
 

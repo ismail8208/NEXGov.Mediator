@@ -99,6 +99,100 @@ public class AdvancedRegistrationCompatibilityTests
         Assert.Equal(ServiceLifetime.Transient, parameters[1].DefaultValue);
     }
 
+    // --- MED-019: AddStreamBehavior / AddOpenStreamBehavior ---
+
+    [Fact]
+    public void AddStreamBehavior_HasExactlyFourOverloads()
+    {
+        Assert.Equal(4, MethodsNamed("AddStreamBehavior").Length);
+    }
+
+    [Fact]
+    public void AddStreamBehavior_TwoGenericArgsOverload_HasExpectedSignature()
+    {
+        var method = MethodsNamed("AddStreamBehavior").Single(m => m.GetGenericArguments().Length == 2);
+
+        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+
+        var parameters = method.GetParameters();
+        Assert.Single(parameters);
+        Assert.Equal(typeof(ServiceLifetime), parameters[0].ParameterType);
+        Assert.True(parameters[0].IsOptional);
+        Assert.Equal(ServiceLifetime.Transient, parameters[0].DefaultValue);
+    }
+
+    [Fact]
+    public void AddStreamBehavior_OneGenericArgOverload_HasExpectedSignature()
+    {
+        var method = MethodsNamed("AddStreamBehavior").Single(m => m.GetGenericArguments().Length == 1);
+
+        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+
+        var parameters = method.GetParameters();
+        Assert.Single(parameters);
+        Assert.Equal(typeof(ServiceLifetime), parameters[0].ParameterType);
+        Assert.True(parameters[0].IsOptional);
+    }
+
+    [Fact]
+    public void AddStreamBehavior_SingleTypeOverload_HasExpectedSignature()
+    {
+        var method = MethodsNamed("AddStreamBehavior")
+            .Single(m => !m.IsGenericMethodDefinition && m.GetParameters().Length == 2);
+
+        var parameters = method.GetParameters();
+        Assert.Equal("implementationType", parameters[0].Name);
+        Assert.Equal(typeof(Type), parameters[0].ParameterType);
+        Assert.Equal("serviceLifetime", parameters[1].Name);
+        Assert.Equal(typeof(ServiceLifetime), parameters[1].ParameterType);
+        Assert.True(parameters[1].IsOptional);
+    }
+
+    [Fact]
+    public void AddStreamBehavior_TwoTypeOverload_HasExpectedSignature()
+    {
+        var method = MethodsNamed("AddStreamBehavior")
+            .Single(m => !m.IsGenericMethodDefinition && m.GetParameters().Length == 3);
+
+        var parameters = method.GetParameters();
+        Assert.Equal("serviceType", parameters[0].Name);
+        Assert.Equal(typeof(Type), parameters[0].ParameterType);
+        Assert.Equal("implementationType", parameters[1].Name);
+        Assert.Equal(typeof(Type), parameters[1].ParameterType);
+        Assert.Equal("serviceLifetime", parameters[2].Name);
+        Assert.Equal(typeof(ServiceLifetime), parameters[2].ParameterType);
+        Assert.True(parameters[2].IsOptional);
+    }
+
+    [Fact]
+    public void AddOpenStreamBehavior_HasExactlyOneOverload_WithExpectedSignature()
+    {
+        var methods = MethodsNamed("AddOpenStreamBehavior");
+        var method = Assert.Single(methods);
+
+        Assert.False(method.IsGenericMethodDefinition);
+        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+
+        var parameters = method.GetParameters();
+        Assert.Equal(2, parameters.Length);
+        Assert.Equal("openBehaviorType", parameters[0].Name);
+        Assert.Equal(typeof(Type), parameters[0].ParameterType);
+        Assert.Equal("serviceLifetime", parameters[1].Name);
+        Assert.Equal(typeof(ServiceLifetime), parameters[1].ParameterType);
+        Assert.True(parameters[1].IsOptional);
+        Assert.Equal(ServiceLifetime.Transient, parameters[1].DefaultValue);
+    }
+
+    [Fact]
+    public void StreamBehaviorsToRegister_IsPublicListOfServiceDescriptor_ReadOnlyProperty()
+    {
+        var property = typeof(MediatRServiceConfiguration).GetProperty("StreamBehaviorsToRegister")!;
+
+        Assert.Equal(typeof(List<ServiceDescriptor>), property.PropertyType);
+        Assert.True(property.CanRead);
+        Assert.Null(property.SetMethod);
+    }
+
     [Theory]
     [InlineData("AddRequestPreProcessor")]
     [InlineData("AddRequestPostProcessor")]

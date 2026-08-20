@@ -113,6 +113,13 @@ public class MediatRServiceConfiguration
     public List<ServiceDescriptor> BehaviorsToRegister { get; } = [];
 
     /// <summary>
+    /// Gets the stream pipeline behavior registrations to add, in order. Populated by
+    /// <see cref="AddStreamBehavior(Type, ServiceLifetime)"/>, <see cref="AddStreamBehavior(Type, Type, ServiceLifetime)"/>,
+    /// and <see cref="AddOpenStreamBehavior"/>.
+    /// </summary>
+    public List<ServiceDescriptor> StreamBehaviorsToRegister { get; } = [];
+
+    /// <summary>
     /// Gets the request pre-processor registrations to add, in order. Populated by
     /// <see cref="AddRequestPreProcessor(Type, ServiceLifetime)"/>, <see cref="AddRequestPreProcessor(Type, Type, ServiceLifetime)"/>,
     /// and <see cref="AddOpenRequestPreProcessor"/>.
@@ -258,6 +265,103 @@ public class MediatRServiceConfiguration
         foreach (var openInterface in implementedOpenInterfaces)
         {
             BehaviorsToRegister.Add(new ServiceDescriptor(openInterface, openBehaviorType, serviceLifetime));
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a closed stream pipeline behavior against every <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/> it implements.
+    /// </summary>
+    /// <typeparam name="TServiceType">The closed stream behavior interface type.</typeparam>
+    /// <typeparam name="TImplementationType">The closed stream behavior implementation type.</typeparam>
+    /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
+    /// <returns>This configuration instance, for chaining.</returns>
+    public MediatRServiceConfiguration AddStreamBehavior<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+        => AddStreamBehavior(typeof(TServiceType), typeof(TImplementationType), serviceLifetime);
+
+    /// <summary>
+    /// Registers a closed stream pipeline behavior against every <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/> it implements.
+    /// </summary>
+    /// <typeparam name="TImplementationType">The closed stream behavior implementation type.</typeparam>
+    /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
+    /// <returns>This configuration instance, for chaining.</returns>
+    public MediatRServiceConfiguration AddStreamBehavior<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+        => AddStreamBehavior(typeof(TImplementationType), serviceLifetime);
+
+    /// <summary>
+    /// Registers a closed stream pipeline behavior against every <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/> it implements.
+    /// </summary>
+    /// <param name="implementationType">The closed stream behavior implementation type.</param>
+    /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
+    /// <returns>This configuration instance, for chaining.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="implementationType"/> does not implement <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/>.</exception>
+    public MediatRServiceConfiguration AddStreamBehavior(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    {
+        ArgumentNullException.ThrowIfNull(implementationType);
+
+        var implementedInterfaces = implementationType.FindInterfacesThatClose(typeof(IStreamPipelineBehavior<,>)).ToList();
+
+        if (implementedInterfaces.Count == 0)
+        {
+            throw new InvalidOperationException($"{implementationType.Name} must implement {typeof(IStreamPipelineBehavior<,>).FullName}");
+        }
+
+        foreach (var implementedInterface in implementedInterfaces)
+        {
+            StreamBehaviorsToRegister.Add(new ServiceDescriptor(implementedInterface, implementationType, serviceLifetime));
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a closed stream pipeline behavior against the given service type.
+    /// </summary>
+    /// <param name="serviceType">The closed stream behavior interface type.</param>
+    /// <param name="implementationType">The closed stream behavior implementation type.</param>
+    /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
+    /// <returns>This configuration instance, for chaining.</returns>
+    public MediatRServiceConfiguration AddStreamBehavior(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+        ArgumentNullException.ThrowIfNull(implementationType);
+
+        StreamBehaviorsToRegister.Add(new ServiceDescriptor(serviceType, implementationType, serviceLifetime));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Registers an open-generic stream pipeline behavior against the open <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/> interface.
+    /// Microsoft.Extensions.DependencyInjection closes it automatically for each concrete stream request/response pair it is resolved for.
+    /// </summary>
+    /// <param name="openBehaviorType">An open-generic type implementing <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/>.</param>
+    /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
+    /// <returns>This configuration instance, for chaining.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="openBehaviorType"/> is not generic, or does not implement <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/>.</exception>
+    public MediatRServiceConfiguration AddOpenStreamBehavior(Type openBehaviorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    {
+        ArgumentNullException.ThrowIfNull(openBehaviorType);
+
+        if (!openBehaviorType.IsGenericType)
+        {
+            throw new InvalidOperationException($"{openBehaviorType.Name} must be generic");
+        }
+
+        var implementedOpenInterfaces = new HashSet<Type>(openBehaviorType.GetInterfaces()
+            .Where(i => i.IsGenericType)
+            .Select(i => i.GetGenericTypeDefinition())
+            .Where(i => i == typeof(IStreamPipelineBehavior<,>)));
+
+        if (implementedOpenInterfaces.Count == 0)
+        {
+            throw new InvalidOperationException($"{openBehaviorType.Name} must implement {typeof(IStreamPipelineBehavior<,>).FullName}");
+        }
+
+        foreach (var openInterface in implementedOpenInterfaces)
+        {
+            StreamBehaviorsToRegister.Add(new ServiceDescriptor(openInterface, openBehaviorType, serviceLifetime));
         }
 
         return this;

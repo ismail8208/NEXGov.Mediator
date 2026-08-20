@@ -41,8 +41,23 @@ internal static class ServiceRegistrar
             AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestPostProcessor<,>), services, candidateTypes, addIfAlreadyExists: true);
         }
 
-        // IStreamRequestHandler<,> scanning is intentionally omitted: streaming
-        // runtime (and its handler contract) is not implemented yet.
+        // Exactly one stream handler per closed stream request is expected,
+        // matching IRequestHandler<,>'s own first-discovered-wins scanning
+        // (verified against current source: MediatR scans
+        // IStreamRequestHandler<,> the same way it scans IRequestHandler<,>,
+        // via the identical ConnectImplementationsToTypesClosing(..., addIfAlreadyExists: false)
+        // call). candidateTypes already excludes types containing open
+        // generic parameters unconditionally, so an open-generic stream
+        // handler is not scanned here regardless of RegisterGenericHandlers.
+        // Current MediatR's own filter *does* gate stream-handler scanning
+        // on RegisterGenericHandlers (verified: it shares the same
+        // `!ContainsGenericParameters || RegisterGenericHandlers` predicate
+        // as every other scanned family) — this is a deliberate, documented
+        // scope narrowing, consistent with the MED-013 policy already
+        // applied to IRequestHandler<,>/IRequestHandler<>: generic-family
+        // expansion beyond request handlers remains a tracked compatibility
+        // gap for a later, dedicated task, not silently expanded here.
+        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IStreamRequestHandler<,>), services, candidateTypes, addIfAlreadyExists: false);
 
         // Open-generic request handler expansion (MED-013) is a separate, additional
         // pass over a disjoint candidate set (types that still contain generic
@@ -88,6 +103,11 @@ internal static class ServiceRegistrar
         }
 
         foreach (var descriptor in configuration.BehaviorsToRegister)
+        {
+            services.TryAddEnumerable(descriptor);
+        }
+
+        foreach (var descriptor in configuration.StreamBehaviorsToRegister)
         {
             services.TryAddEnumerable(descriptor);
         }

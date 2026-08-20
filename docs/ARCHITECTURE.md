@@ -606,6 +606,49 @@ Automatic discovery via `AddMediatR` remains deferred to MED-019.
   never wrap or observe a stream request, matching current MediatR
   (which has no such cross-wiring either).
 
+## Streaming DI/registration principles
+
+MED-019 extended assembly scanning and `MediatRServiceConfiguration` to
+cover streaming. These principles describe only the DI/scanning layer —
+see "DI / assembly-scanning principles" and "Streaming runtime
+principles" above for the underlying mechanics they build on.
+
+- **Closed stream handlers participate in the same configured-assembly
+  scanning pass as ordinary request handlers.** `IStreamRequestHandler<,>`
+  is scanned via the identical shared `candidateTypes`/`FindInterfacesThatClose`
+  machinery `IRequestHandler<,>` uses — same first-discovered-wins
+  (`TryAddTransient`) semantics, same indirect/inherited-implementation
+  discovery, same abstract-type exclusion, same `TypeEvaluator` filtering.
+  No second scanner was introduced.
+- **Stream pipeline behaviors are never scanned**, matching
+  `IPipelineBehavior<,>`'s own rule exactly. A behavior only participates
+  because `AddStreamBehavior`/`AddOpenStreamBehavior` explicitly added it
+  to `StreamBehaviorsToRegister`, consumed by a plain `TryAddEnumerable`
+  loop with no special-casing.
+- **Stream behavior configuration preserves registration order**,
+  matching the MED-018-verified first-registered-outermost runtime
+  convention: `StreamBehaviorsToRegister` is an ordered list, and
+  `AddMediatR` registers its descriptors in that order.
+- **Open stream behaviors are closed by Microsoft.Extensions.DependencyInjection
+  itself**, not by this project — `AddOpenStreamBehavior` registers the
+  open `IStreamPipelineBehavior<,>` service/open-implementation pair once;
+  MS.DI closes it automatically for each concrete stream request/response
+  pair resolved against it, the same way `AddOpenBehavior` already does
+  for `IPipelineBehavior<,>`.
+- **The scanner never instantiates a handler or behavior.** Discovery
+  operates purely on `Type` metadata; actual instances are always
+  constructed later, by the DI container, at dispatch time — identical to
+  every other scanned family.
+- **Generic stream-handler expansion remains excluded**, a deliberate
+  continuation of the MED-013 policy already applied to
+  `IRequestHandler<,>`/`IRequestHandler<>`: `RegisterGenericHandlers`
+  does not expand open-generic `IStreamRequestHandler<,>` implementations,
+  even though current MediatR's own `RegisterGenericHandlers` gates
+  stream-handler scanning the same way it gates every other family. This
+  is tracked as part of the single, consolidated generic-family-expansion
+  compatibility gap (see `docs/COMPATIBILITY-AUDIT.md`), not implemented
+  piecemeal per family.
+
 ## Non-goals
 
 - Reproducing MediatR's internal class structure or implementation

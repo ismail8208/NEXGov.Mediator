@@ -16,24 +16,29 @@ internal static class ServiceRegistrar
     {
         var assembliesToScan = configuration.AssembliesToRegister.Distinct().ToArray();
 
+        // Computed once and reused across every family below, instead of
+        // each ConnectClosedInterfaceImplementations call re-enumerating
+        // and re-filtering Assembly.DefinedTypes from scratch.
+        var candidateTypes = AssemblyScanner.GetCandidateTypes(assembliesToScan, configuration.TypeEvaluator);
+
         // Exactly one handler per closed request/response pair is expected, so a
         // duplicate is silently ignored (first-discovered wins) rather than added.
-        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestHandler<,>), services, assembliesToScan, addIfAlreadyExists: false, configuration.TypeEvaluator);
-        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestHandler<>), services, assembliesToScan, addIfAlreadyExists: false, configuration.TypeEvaluator);
+        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestHandler<,>), services, candidateTypes, addIfAlreadyExists: false);
+        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestHandler<>), services, candidateTypes, addIfAlreadyExists: false);
 
         // Any number of handlers/actions may apply to the same closed
         // notification/exception type, so every match is kept.
-        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(INotificationHandler<>), services, assembliesToScan, addIfAlreadyExists: true, configuration.TypeEvaluator);
-        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestExceptionHandler<,,>), services, assembliesToScan, addIfAlreadyExists: true, configuration.TypeEvaluator);
-        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestExceptionAction<,>), services, assembliesToScan, addIfAlreadyExists: true, configuration.TypeEvaluator);
+        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(INotificationHandler<>), services, candidateTypes, addIfAlreadyExists: true);
+        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestExceptionHandler<,,>), services, candidateTypes, addIfAlreadyExists: true);
+        AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestExceptionAction<,>), services, candidateTypes, addIfAlreadyExists: true);
 
         // Registering the processor implementations as services is independent
         // of wiring RequestPreProcessorBehavior/RequestPostProcessorBehavior
         // into the pipeline — see MediatRServiceConfiguration.AutoRegisterRequestProcessors.
         if (configuration.AutoRegisterRequestProcessors)
         {
-            AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestPreProcessor<>), services, assembliesToScan, addIfAlreadyExists: true, configuration.TypeEvaluator);
-            AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestPostProcessor<,>), services, assembliesToScan, addIfAlreadyExists: true, configuration.TypeEvaluator);
+            AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestPreProcessor<>), services, candidateTypes, addIfAlreadyExists: true);
+            AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestPostProcessor<,>), services, candidateTypes, addIfAlreadyExists: true);
         }
 
         // IStreamRequestHandler<,> scanning is intentionally omitted: streaming

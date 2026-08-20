@@ -283,6 +283,17 @@ MediatR's own placement), and the internal `ServiceRegistrar`/`AssemblyScanner`.
   closure checks) and calls `IServiceCollection.AddTransient`/`TryAddTransient`
   with `(serviceType, implementationType)` pairs — it never calls a
   constructor or otherwise creates a handler object.
+- **Interface closure is fully transitive, including indirect
+  implementations (MED-012).** `TypeExtensions.FindInterfacesThatClose`
+  and `AssemblyScanner.ConnectClosedInterfaceImplementations` both use
+  `Type.GetInterfaces()`, which returns every interface a type implements
+  by any path — direct, through an abstract or non-abstract base class, or
+  through a custom interface that itself extends the open service
+  interface, at any depth in either direction — and already deduplicates a
+  closed interface reachable via more than one path. Only a type's
+  concrete (non-abstract, non-open-generic) form is ever a scan candidate,
+  so an abstract intermediate base is never itself registered even when it
+  implements the closed interface directly; its concrete descendants are.
 - **`IServiceProvider` remains the runtime resolution boundary.**
   Scanning only populates the `IServiceCollection`; every scanned handler
   is still resolved through the provider at dispatch time, exactly like a

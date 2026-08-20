@@ -48,13 +48,61 @@ public class MediatRServiceConfiguration
     public bool AutoRegisterRequestProcessors { get; set; }
 
     /// <summary>
-    /// Gets or sets whether scanning should attempt to register handler implementations that still
-    /// contain open generic type parameters. Default value is <see langword="false"/>. Setting this to
-    /// <see langword="true"/> currently has no effect — open-generic handler registration is deferred to
-    /// a later compatibility milestone; types containing generic parameters are always skipped by the
-    /// current scanner.
+    /// Gets or sets whether scanning should expand open-generic <see cref="IRequestHandler{TRequest, TResponse}"/>/
+    /// <see cref="IRequestHandler{TRequest}"/> implementations into closed registrations for every valid
+    /// combination of candidate types satisfying the handler's own generic constraints. Default value is
+    /// <see langword="false"/>. Implemented in MED-013 for request handlers only — notification handlers,
+    /// exception handlers/actions, and pre/post processors containing open generic type parameters remain
+    /// excluded from scanning regardless of this setting (a deliberate, documented scope narrowing from
+    /// current MediatR — see <c>docs/COMPATIBILITY.md</c>).
     /// </summary>
     public bool RegisterGenericHandlers { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of generic type parameters an open-generic request handler may
+    /// declare when <see cref="RegisterGenericHandlers"/> is enabled. Default value is <c>10</c>, matching
+    /// current MediatR. A value of <c>0</c> disables this check (verified against current source: the
+    /// guard is <c>MaxGenericTypeParameters &gt; 0</c>); a negative value behaves the same as <c>0</c>
+    /// (the guard is never satisfied). Only affects generic request-handler registration.
+    /// </summary>
+    public int MaxGenericTypeParameters { get; set; } = 10;
+
+    /// <summary>
+    /// Gets or sets the maximum number of candidate types allowed to close a single generic parameter of
+    /// an open-generic request handler when <see cref="RegisterGenericHandlers"/> is enabled. Default
+    /// value is <c>100</c>, matching current MediatR. A value of <c>0</c> disables this check; a negative
+    /// value behaves the same as <c>0</c>. Only affects generic request-handler registration.
+    /// </summary>
+    public int MaxTypesClosing { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets the maximum total number of closed registrations one open-generic request handler may
+    /// generate (the product of the candidate-type counts across all of its generic parameters) when
+    /// <see cref="RegisterGenericHandlers"/> is enabled. Default value is <c>125000</c>, matching current
+    /// MediatR. <strong>Verified quirk, faithfully replicated:</strong> current MediatR gates this specific
+    /// check on <c>MaxGenericTypeParameters &gt; 0</c> rather than on <c>MaxGenericTypeRegistrations &gt; 0</c>
+    /// — an apparent copy-paste artifact in the upstream limit guards, confirmed by direct inspection of
+    /// current source, not assumed. Consequence: setting only <see cref="MaxGenericTypeParameters"/> to
+    /// <c>0</c> also disables this check, even if <see cref="MaxGenericTypeRegistrations"/> itself is left
+    /// at a real positive value; conversely, setting only this property to <c>0</c> while
+    /// <see cref="MaxGenericTypeParameters"/> remains at its default does <em>not</em> disable this check —
+    /// it instead makes it fail for almost any non-empty combination (<c>totalCombinations &gt; 0</c>).
+    /// Only affects generic request-handler registration.
+    /// </summary>
+    public int MaxGenericTypeRegistrations { get; set; } = 125000;
+
+    /// <summary>
+    /// Gets or sets, in milliseconds, how long generic request-handler registration is allowed to run
+    /// before it is aborted. Default value is <c>15000</c>, matching current MediatR.
+    /// <strong>Verified, not the documented-elsewhere assumption:</strong> a value of <c>0</c> does
+    /// <em>not</em> disable the timeout — it is passed directly to a
+    /// <see cref="System.Threading.CancellationTokenSource(int)"/>, whose documented contract treats
+    /// <c>0</c> as an already-expired delay, so generic handler registration is cancelled immediately.
+    /// Only <c>-1</c> (<see cref="System.Threading.Timeout.Infinite"/>) disables the timeout, per that same
+    /// contract. On expiry, a <see cref="TimeoutException"/> is thrown. Only affects generic request-handler
+    /// registration — ordinary (non-generic) scanning is not subject to this timeout.
+    /// </summary>
+    public int RegistrationTimeout { get; set; } = 15000;
 
     internal List<Assembly> AssembliesToRegister { get; } = [];
 

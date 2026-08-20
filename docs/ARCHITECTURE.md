@@ -390,6 +390,51 @@ Introduced in MED-011 alongside `MediatRServiceConfiguration.AddBehavior`/`AddOp
   calls (or a manual `IPipelineBehavior<,>` registration) make any
   processor actually run.
 
+## Generic request-handler registration principles
+
+Introduced in MED-013, via the internal `GenericRequestHandlerRegistrar`,
+called once from `ServiceRegistrar.AddMediatRClasses` after ordinary
+scanning, gated on `MediatRServiceConfiguration.RegisterGenericHandlers`.
+
+- **Opt-in, request handlers only.** Disabled by default; when enabled,
+  expands only open-generic `IRequestHandler<,>`/`IRequestHandler<>`
+  implementations. Notification handlers, exception handlers/actions, and
+  pre/post processors containing open generic parameters remain excluded
+  from scanning regardless of this setting — a deliberate scope narrowing
+  from current MediatR's own broader behavior (see `docs/COMPATIBILITY.md`).
+- **Expansion happens during registration, not runtime dispatch.** Like
+  `AssemblyScanner`, `GenericRequestHandlerRegistrar` reads only `Type`
+  metadata — no handler is ever instantiated and no `IServiceProvider` is
+  touched; every closed registration it produces is dispatched afterward by
+  the same MED-005–009 pipeline machinery as any other handler, which
+  remains completely unaware of how a handler was registered.
+- **Only valid closed pairs are registered.** A combination is included
+  only when every candidate independently satisfies the corresponding
+  generic parameter's full constraint set (base type/interface constraints
+  via `Type.GetGenericParameterConstraints()` plus the CLR special
+  constraints `class`/`struct`/`new()` read from
+  `GenericParameterAttributes`); combinations that would fail regardless
+  (an unused handler type parameter, a base class that only partially
+  closes a multi-argument request type) are skipped rather than producing
+  an invalid or crash-prone registration.
+- **Safety limits protect startup from combinatorial explosion.**
+  `MaxGenericTypeParameters`, `MaxTypesClosing`, and
+  `MaxGenericTypeRegistrations` bound, respectively, how many generic
+  parameters a handler may declare, how many candidates may close a single
+  parameter, and how many total closed registrations one handler may
+  produce; `RegistrationTimeout` bounds how long the whole expansion may
+  run. All four faithfully replicate current source's exact verified
+  semantics, including its non-obvious zero-value quirks — see
+  `docs/COMPATIBILITY.md` for the precise behavior of each.
+- **Generated handler instances remain DI-owned.** Every closed
+  registration is an ordinary `services.AddTransient(serviceType,
+  implementationType)` call; resolution, scoping, and disposal are no
+  different from a manually-registered or ordinarily-scanned handler.
+- **Generic registration does not change `Send` runtime architecture.**
+  `Mediator`/`RequestHandlerWrapper` resolve `IRequestHandler<,>`/`IRequestHandler<>`
+  exactly as before MED-013 — a generated closed registration is
+  indistinguishable, at dispatch time, from one written by hand.
+
 ## Non-goals
 
 - Reproducing MediatR's internal class structure or implementation

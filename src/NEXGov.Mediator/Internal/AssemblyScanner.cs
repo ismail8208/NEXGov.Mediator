@@ -84,7 +84,11 @@ internal static class AssemblyScanner
 
     private static bool IsConcrete(Type type) => !type.IsAbstract && !type.IsInterface;
 
-    private static IEnumerable<Type> GetLoadableDefinedTypes(Assembly assembly)
+    /// <summary>
+    /// Shared with <see cref="GenericRequestHandlerRegistrar"/>, which needs the same
+    /// load-tolerant assembly enumeration for its own (separately filtered) candidate scan.
+    /// </summary>
+    internal static IEnumerable<Type> GetLoadableDefinedTypes(Assembly assembly)
     {
         try
         {

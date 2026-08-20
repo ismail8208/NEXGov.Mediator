@@ -43,6 +43,12 @@ internal static class ServiceRegistrar
 
         // IStreamRequestHandler<,> scanning is intentionally omitted: streaming
         // runtime (and its handler contract) is not implemented yet.
+
+        // Open-generic request handler expansion (MED-013) is a separate, additional
+        // pass over a disjoint candidate set (types that still contain generic
+        // parameters, which the scanning above always excludes) — see
+        // GenericRequestHandlerRegistrar for the algorithm and its verified quirks.
+        GenericRequestHandlerRegistrar.Register(services, configuration, assembliesToScan);
     }
 
     public static void AddRequiredServices(IServiceCollection services, MediatRServiceConfiguration configuration)

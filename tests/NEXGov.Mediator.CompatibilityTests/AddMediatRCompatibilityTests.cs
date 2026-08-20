@@ -65,6 +65,33 @@ public class AddMediatRCompatibilityTests
         Assert.Equal(RequestExceptionActionProcessorStrategy.ApplyForUnhandledExceptions, configuration.RequestExceptionActionProcessorStrategy);
     }
 
+    // --- MED-013: generic request-handler registration configuration surface ---
+
+    [Fact]
+    public void MediatRServiceConfiguration_RegisterGenericHandlers_DefaultsToFalse()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        Assert.False(configuration.RegisterGenericHandlers);
+    }
+
+    [Theory]
+    [InlineData(nameof(MediatRServiceConfiguration.MaxGenericTypeParameters), 10)]
+    [InlineData(nameof(MediatRServiceConfiguration.MaxTypesClosing), 100)]
+    [InlineData(nameof(MediatRServiceConfiguration.MaxGenericTypeRegistrations), 125000)]
+    [InlineData(nameof(MediatRServiceConfiguration.RegistrationTimeout), 15000)]
+    public void MediatRServiceConfiguration_GenericHandlerLimitProperty_HasExpectedDefault(string propertyName, int expectedDefault)
+    {
+        var configuration = new MediatRServiceConfiguration();
+        var property = typeof(MediatRServiceConfiguration).GetProperty(propertyName, DeclaredPublicInstance);
+
+        Assert.NotNull(property);
+        Assert.Equal(typeof(int), property.PropertyType);
+        Assert.True(property.CanRead);
+        Assert.True(property.CanWrite);
+        Assert.Equal(expectedDefault, property.GetValue(configuration));
+    }
+
     [Theory]
     [InlineData("RegisterServicesFromAssemblyContaining", 0, typeof(MediatRServiceConfiguration))]
     [InlineData("RegisterServicesFromAssembly", 0, typeof(MediatRServiceConfiguration))]

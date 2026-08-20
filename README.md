@@ -93,6 +93,30 @@ behavior targeting one specific request/response pair instead.
 including which parts of `AddMediatR` scanning currently register a
 service versus actually wire it into request execution.
 
+### Generic request handlers
+
+Off by default. Enable it to have scanning expand an open-generic
+`IRequestHandler<,>`/`IRequestHandler<>` implementation into one closed
+registration per candidate type satisfying its own generic constraints:
+
+```csharp
+services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssemblyContaining<Program>();
+    cfg.RegisterGenericHandlers = true;
+});
+
+public sealed class GetByIdHandler<TEntity> : IRequestHandler<GetById<TEntity>, EntityDto<TEntity>>
+    where TEntity : BaseEntity
+{
+    // Registered once per concrete BaseEntity subclass found while scanning.
+}
+```
+
+See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the exact
+constraint/limit/timeout semantics — several of them replicate genuinely
+surprising, verified current-MediatR behavior around zero-value limits.
+
 ## Compatibility goal
 
 NEXGov.Mediator's design goal is to be a **source-compatible alternative

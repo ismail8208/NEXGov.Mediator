@@ -492,10 +492,10 @@ scanning, gated on `MediatRServiceConfiguration.RegisterGenericHandlers`.
 
 ## Streaming contract principles
 
-MED-017 introduced the streaming pipeline **contracts** only — no runtime.
-The principles below describe the contract layer as it exists today; the
-runtime milestone (MED-018+) will add its own architectural notes when it
-lands.
+MED-017 introduced the streaming pipeline **contracts**. MED-018 added
+their runtime (see "Streaming runtime principles" below); automatic
+`AddMediatR` discovery of stream handlers/behaviors remains deferred to
+MED-019.
 
 - **Streaming requests use `IAsyncEnumerable<T>`, not `Task<T>`.**
   `IStreamRequestHandler<TRequest, TResponse>.Handle(...)` and
@@ -524,13 +524,87 @@ lands.
   `IStreamRequestHandler<,>`'s covariant `TResponse`. Do not assume
   variance is uniform across a contract family; each shape is verified
   independently.
-- **Runtime execution, cancellation forwarding, and enumeration semantics
-  remain deferred.** `Mediator.CreateStream` still throws
-  `NotSupportedException` for both overloads; nothing resolves an
-  `IStreamRequestHandler<,>`, constructs a stream pipeline, or scans for
-  stream handlers during `AddMediatR`. Those are runtime-milestone
-  concerns (MED-018 dispatch, MED-019 DI registration), not contract
-  concerns, and are intentionally out of scope here.
+## Streaming runtime principles
+
+MED-018 implemented `Mediator.CreateStream` dispatch for **manually
+registered** stream handlers/behaviors, verified against current
+MediatR's own `Mediator.CreateStream`/`StreamRequestHandlerWrapperImpl`
+runtime source (clean-room reimplementation — an independently designed
+wrapper/cache/delegate-composition architecture, not transcribed code).
+Automatic discovery via `AddMediatR` remains deferred to MED-019.
+
+- **Dispatch is by concrete runtime type, never the declared/static
+  type** — identical principle to `Send(...)`. A variable statically
+  typed as `IStreamRequest<TResponse>` (or a base type) but holding a
+  more-derived concrete instance resolves the handler registered for the
+  *derived* type.
+- **`CreateStream(...)` itself does almost no work.** It validates
+  arguments eagerly and synchronously (`ArgumentNullException` for a
+  null request on both overloads; `ArgumentException` for a dynamic
+  request not implementing `IStreamRequest<TResponse>`) and looks up a
+  cached, stateless wrapper instance — nothing else. Everything else is
+  deferred.
+- **Everything past argument validation is lazy, driven entirely by C#
+  iterator-method semantics, not manual laziness bookkeeping.** The
+  wrapper's dispatch method is itself an `async IAsyncEnumerable<T>`
+  method, so none of its body — behavior resolution, pipeline
+  composition, handler resolution, or execution — runs until the caller
+  actually enumerates the returned stream. A missing-handler
+  `InvalidOperationException` therefore surfaces on first enumeration,
+  never at the `CreateStream` call.
+- **Two-tier resolution laziness.** `IStreamPipelineBehavior<,>`
+  instances are resolved once, up front, as soon as enumeration begins
+  (before any item is produced) — but the `IStreamRequestHandler<,>`
+  itself is resolved *later still*: only when the composed behavior
+  chain actually reaches it by calling `next`. A behavior that
+  short-circuits (never calls `next`) means the handler is never even
+  looked up in the service provider, not merely never invoked — verified
+  against current MediatR, not an invented optimization.
+- **Pipeline composition mirrors `IPipelineBehavior<,>`'s convention:
+  first-registered is outermost.** Behaviors wrap `next` from the
+  last-registered inward, so the first-registered behavior's logic runs
+  first on the way in and last on the way out — same mental model as the
+  Task-based pipeline, applied to a stream instead.
+- **`StreamHandlerDelegate<TResponse>` carries no `CancellationToken`,
+  so the single token passed to `CreateStream` is bridged onto each
+  composition boundary internally** rather than threaded through the
+  delegate's own signature. Every handler and behavior in the chain
+  receives that same token directly as a `Handle(...)` parameter
+  regardless; nothing links or combines multiple tokens.
+- **Cancellation is only ever observed where code explicitly checks
+  it.** Neither `.WithCancellation(...)` nor `[EnumeratorCancellation]`
+  auto-inserts a cancellation check — this is standard C#
+  `IAsyncEnumerable<T>` behavior, not a MediatR- or NEXGov.Mediator-specific
+  design choice. A pre-cancelled token supplied to `CreateStream` does
+  not make the call throw; only a handler/behavior that calls
+  `cancellationToken.ThrowIfCancellationRequested()` (or awaits a
+  cancellable operation) surfaces `OperationCanceledException`, and only
+  once enumeration reaches that point.
+- **Never buffered, never materialized.** Items flow one at a time
+  through the full behavior chain to the caller; nothing collects a
+  stream into a list internally at any layer.
+- **Dynamic (`object`) `CreateStream` boxes per item, not per stream.**
+  The non-generic wrapper is itself an async-iterator method that
+  `yield return`s each element as `object?`, which the runtime boxes
+  individually — never an unsound cast of `IAsyncEnumerable<TValueType>`
+  to `IAsyncEnumerable<object>`.
+- **Wrapper instances are cached, keyed by (request type, response
+  type), never by request type alone.** Current MediatR's own cache key
+  is request type only, which is unsound for a covariant
+  `IStreamRequest<TResponse>` passed through a wider statically-typed
+  reference; the tuple key here matches the same deliberate,
+  already-established deviation `RequestHandlerWrapperCache` uses for
+  `Send`, for the same reason. Wrapper instances themselves are
+  stateless — no `IServiceProvider`, handler, or behavior is ever cached
+  — so handlers/behaviors and their DI-scoped dependencies are resolved
+  fresh on every enumeration, never reused across scopes or across
+  repeated enumeration of the same returned stream.
+- **The ordinary request pipeline is entirely uninvolved.** Streaming
+  has its own separate wrapper/cache infrastructure
+  (`StreamRequestHandlerWrapper*`); `IPipelineBehavior<,>`, pre/post
+  processors, and `IRequestExceptionHandler<,,>`/`IRequestExceptionAction<,>`
+  never wrap or observe a stream request, matching current MediatR
+  (which has no such cross-wiring either).
 
 ## Non-goals
 

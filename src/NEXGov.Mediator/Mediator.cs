@@ -129,16 +129,40 @@ public class Mediator : IMediator
     }
 
     /// <inheritdoc/>
-    /// <exception cref="NotSupportedException">Streaming runtime support is not implemented yet.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="request"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">No matching <see cref="IStreamRequestHandler{TRequest,TResponse}"/> is registered.</exception>
     public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming runtime support is not implemented yet.");
+        ArgumentNullException.ThrowIfNull(request);
+
+        var wrapper = (StreamRequestHandlerWrapper<TResponse>)StreamRequestHandlerWrapperCache.GetWrapper(request.GetType(), typeof(TResponse));
+
+        return wrapper.Handle(request, _serviceProvider, cancellationToken);
     }
 
     /// <inheritdoc/>
-    /// <exception cref="NotSupportedException">Streaming runtime support is not implemented yet.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="request"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="request"/> does not implement <see cref="IStreamRequest{TResponse}"/>.</exception>
+    /// <exception cref="InvalidOperationException">No matching <see cref="IStreamRequestHandler{TRequest,TResponse}"/> is registered.</exception>
     public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming runtime support is not implemented yet.");
+        ArgumentNullException.ThrowIfNull(request);
+
+        var concreteType = request.GetType();
+
+        var streamInterfaceType = concreteType.GetInterfaces()
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IStreamRequest<>));
+
+        if (streamInterfaceType is null)
+        {
+            throw new ArgumentException(
+                $"'{concreteType.FullName}' is not a supported stream request. It must implement IStreamRequest<TResponse>.",
+                nameof(request));
+        }
+
+        var responseType = streamInterfaceType.GetGenericArguments()[0];
+        var wrapper = StreamRequestHandlerWrapperCache.GetWrapper(concreteType, responseType);
+
+        return wrapper.Handle(request, _serviceProvider, cancellationToken);
     }
 }

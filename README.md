@@ -13,9 +13,10 @@ processors, exception handlers/actions, and dependency-injection
 registration (`AddMediatR` with assembly scanning, plus explicit
 `AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
 registration) are implemented and tested. Streaming request/handler/behavior
-contracts are implemented; streaming runtime execution is not implemented
-yet. Nothing in this repository has had a stable release; treat it as
-pre-release.
+contracts and runtime execution are implemented for manually-registered
+stream handlers/behaviors; automatic scanning/configuration for streaming
+is not implemented yet. Nothing in this repository has had a stable
+release; treat it as pre-release.
 
 ## Quick start
 
@@ -90,11 +91,14 @@ behavior targeting one specific request/response pair instead.
 
 **Streaming:** the request/handler/behavior contracts
 (`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,
-`IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`) are implemented
-and compatibility-tested. **Runtime execution is not yet implemented** —
-`ISender.CreateStream(...)` still throws `NotSupportedException`, and
-`AddMediatR` does not scan for stream handlers. See
-[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture,
+`IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`) are implemented,
+and `ISender.CreateStream(...)` runtime is available for **explicitly
+registered** stream handlers/behaviors. **Automatic scanning/configuration
+is pending** — `AddMediatR` does not yet discover `IStreamRequestHandler<,>`
+implementations, and there is no `AddStreamBehavior`/`AddOpenStreamBehavior`
+yet, so a stream handler/behavior must currently be registered manually
+(e.g. `services.AddTransient<IStreamRequestHandler<MyRequest, TResponse>, MyHandler>()`).
+See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture,
 including which parts of `AddMediatR` scanning currently register a
 service versus actually wire it into request execution.
 
@@ -186,9 +190,10 @@ is used as a compatibility reference.
       scope narrowing versus current MediatR)
 - [x] Void-request `Unit` typing and current handler-proximity exception
       ordering
-- [ ] Streaming requests (contracts implemented — `IStreamRequest<TResponse>`,
-      `IStreamRequestHandler<,>`, `IStreamPipelineBehavior<,>`,
-      `StreamHandlerDelegate<>`; runtime dispatch/DI registration pending)
+- [ ] Streaming requests (contracts and manually-registered runtime dispatch
+      implemented — `IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,
+      `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`,
+      `CreateStream(...)`; `AddMediatR` scanning/`AddStreamBehavior` pending)
 - [ ] Compatibility test suite covering the V1 Required and V1 Extended
       surface
 

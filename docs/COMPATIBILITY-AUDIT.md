@@ -53,10 +53,12 @@ handlers only, a deliberate, documented scope narrowing from current
 MediatR's broader `RegisterGenericHandlers` reach.
 
 Two real, current-MediatR public API surfaces have **no NEXGov.Mediator
-equivalent at all**: streaming runtime (stream DI registration/scanning,
-`AddStreamBehavior`\*/`AddOpenStreamBehavior`, `CreateStream` runtime —
-the contract layer, `IStreamRequestHandler<,>`/`IStreamPipelineBehavior<,>`/
-`StreamHandlerDelegate<>`, is implemented as of MED-017), the notification publisher
+equivalent at all**: streaming assembly scanning/configuration (`AddMediatR`
+discovery of `IStreamRequestHandler<,>`, `AddStreamBehavior`\*/`AddOpenStreamBehavior`
+— the contract layer, `IStreamRequestHandler<,>`/`IStreamPipelineBehavior<,>`/
+`StreamHandlerDelegate<>`, is implemented as of MED-017, and `CreateStream`
+runtime dispatch/pipeline composition for manually-registered handlers is
+implemented as of MED-018), the notification publisher
 abstraction (`INotificationPublisher`, `ForeachAwaitPublisher`/
 `TaskWhenAllPublisher`, the `Mediator(IServiceProvider, INotificationPublisher)`
 constructor overload, and the two `MediatRServiceConfiguration` properties
@@ -112,9 +114,10 @@ re-confirmed here:
 | `RequestExceptionProcessorBehavior<,>` / `RequestExceptionActionProcessorBehavior<,>` | Exact-then-base exception-type walk; stop-on-handled; handler proximity ordering (MED-015, see its own audit item); action cross-level dedup (MED-015). |
 | `Unit` | See dedicated Unit Audit item — fully Verified. |
 | `IStreamRequest<out TResponse>` | Covariant. **MED-017 correction:** does **not** extend `IBaseRequest` — unlike `IRequest`/`IRequest<TResponse>`. The original MED-004 implementation incorrectly assumed the same inheritance pattern; re-verified against current source and fixed in MED-017. Contract only — see Streaming for the rest of the family. |
-| `IStreamRequestHandler<in TRequest, out TResponse>` | `where TRequest : IStreamRequest<TResponse>`; `IAsyncEnumerable<TResponse> Handle(TRequest, CancellationToken)`. Implemented in MED-017. Contract only — not scanned by `AddMediatR`, never invoked by `CreateStream`; see Streaming. |
-| `IStreamPipelineBehavior<in TRequest, TResponse>` | `where TRequest : notnull`; `TResponse` has no variance modifier (verified — asymmetric with `IStreamRequestHandler<,>`'s covariant `TResponse`, but consistent with `IPipelineBehavior<,>`'s own unmodified `TResponse`); `IAsyncEnumerable<TResponse> Handle(TRequest, StreamHandlerDelegate<TResponse>, CancellationToken)`. Implemented in MED-017. Contract only — see Streaming. |
-| `StreamHandlerDelegate<out TResponse>` | `delegate IAsyncEnumerable<TResponse> StreamHandlerDelegate<TResponse>()` — covariant, **no** `CancellationToken` parameter (verified — asymmetric with `RequestHandlerDelegate<TResponse>`, which takes one). Implemented in MED-017. |
+| `IStreamRequestHandler<in TRequest, out TResponse>` | `where TRequest : IStreamRequest<TResponse>`; `IAsyncEnumerable<TResponse> Handle(TRequest, CancellationToken)`. Contract implemented in MED-017; runtime dispatch (resolved via `IServiceProvider`, invoked by `CreateStream`) implemented in MED-018. Manually-registered handlers only — not yet scanned by `AddMediatR`; see Streaming. |
+| `IStreamPipelineBehavior<in TRequest, TResponse>` | `where TRequest : notnull`; `TResponse` has no variance modifier (verified — asymmetric with `IStreamRequestHandler<,>`'s covariant `TResponse`, but consistent with `IPipelineBehavior<,>`'s own unmodified `TResponse`); `IAsyncEnumerable<TResponse> Handle(TRequest, StreamHandlerDelegate<TResponse>, CancellationToken)`. Contract implemented in MED-017; runtime composition (first-registered-outermost, same convention as `IPipelineBehavior<,>`; short-circuit means the handler is never resolved) implemented in MED-018. Manually-registered behaviors only; see Streaming. |
+| `StreamHandlerDelegate<out TResponse>` | `delegate IAsyncEnumerable<TResponse> StreamHandlerDelegate<TResponse>()` — covariant, **no** `CancellationToken` parameter (verified — asymmetric with `RequestHandlerDelegate<TResponse>`, which takes one). Implemented in MED-017; MED-018's runtime bridges the single `CreateStream` token onto each composition boundary internally so it still reaches handlers/behaviors despite the delegate itself carrying none. |
+| `CreateStream(...)` runtime | Resolves the closed `IStreamRequestHandler<,>`/`IStreamPipelineBehavior<,>` for the request's **concrete runtime type** via `IServiceProvider`; fully lazy (argument validation is eager/synchronous, everything else — behavior resolution, handler resolution, execution — is deferred to first enumeration); never buffers; missing-handler `InvalidOperationException` surfaces on first enumeration, not at the `CreateStream` call; multiple registered handlers resolve to the last-registered one (plain `IServiceProvider.GetService<T>()` semantics). Implemented in MED-018, verified against current MediatR's `Mediator.CreateStream`/`StreamRequestHandlerWrapperImpl` runtime source. Manually-registered handlers/behaviors only. |
 | `MediatRServiceConfiguration` (subset) | `TypeEvaluator`, `MediatorImplementationType`, `Lifetime`, `RequestExceptionActionProcessorStrategy`, `AutoRegisterRequestProcessors`, `RegisterGenericHandlers` + 4 limit properties, `RegisterServicesFromAssembly*` (3 overloads), `AddBehavior` (4 overloads), `AddOpenBehavior` (1), `AddRequestPreProcessor` (4), `AddOpenRequestPreProcessor` (1), `AddRequestPostProcessor` (4), `AddOpenRequestPostProcessor` (1) — see Configuration API Completeness for what's missing from this list. |
 | `MediatRServiceCollectionExtensions.AddMediatR` | Both overloads (`Action<MediatRServiceConfiguration>`, `MediatRServiceConfiguration`); return the same `IServiceCollection`; null-guard and no-assembly-configured guard behavior verified. |
 | `RequestExceptionActionProcessorStrategy` | Enum, two members, default `ApplyForUnhandledExceptions`. |
@@ -126,15 +129,14 @@ re-confirmed here:
 | `Mediator` constructors | Current MediatR: `Mediator(IServiceProvider)` (delegates internally to a second overload with `new ForeachAwaitPublisher()`) **and** `Mediator(IServiceProvider, INotificationPublisher)`. NEXGov.Mediator: only `Mediator(IServiceProvider)`. The second overload cannot be added without first introducing `INotificationPublisher` (see Notification Publishing Audit) — tracked together, not a standalone fix. |
 | `MediatRServiceConfiguration` | See Configuration API Completeness — missing `NotificationPublisher`/`NotificationPublisherType`, `StreamBehaviorsToRegister`, `AddStreamBehavior`\*/`AddOpenStreamBehavior`, `AddOpenBehaviors`\*(plural)/`OpenBehavior`, `LicenseKey`. Everything else present matches exactly. |
 | `RegisterGenericHandlers` scope | Verified current MediatR applies this to every scanned family (request handlers, notification handlers, exception handlers/actions, pre/post processors — see Generic Handler Scope Audit). NEXGov.Mediator (MED-013) applies it to `IRequestHandler<,>`/`IRequestHandler<>` only — a deliberate, documented narrowing, not a defect. |
-| `Send`/`CreateStream` on `ISender`/`Mediator` | Method signatures present and correct; `CreateStream` throws `NotSupportedException` rather than streaming — see Streaming Audit. Streaming *contracts* (`IStreamRequestHandler<,>`, `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`) are now implemented (MED-017) and used nowhere by `CreateStream` yet — see Fully Compatible Core and "Not Implemented" below. |
+| `Send`/`CreateStream` on `ISender`/`Mediator` | `Send(...)` unchanged. `CreateStream(...)` runtime is now implemented (MED-018) — see Fully Compatible Core — but only for **manually-registered** handlers/behaviors; `AddMediatR` does not discover them. Listed here (not Fully Compatible Core) solely because of that scanning gap, not a runtime gap. |
 
 ## Not Implemented
 
 | API / Feature | Current MediatR shape | Practical importance |
 |---|---|---|
-| `CreateStream` runtime | Actual handler resolution/dispatch/pipeline execution for streaming requests. The MED-017 contracts (`IStreamRequestHandler<,>`, `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`) exist but nothing constructs or invokes them yet. | High for any streaming consumer; zero for the CleanArchitecture-style request/response/notification subset. |
-| Stream assembly scanning | `AddMediatR` discovering `IStreamRequestHandler<,>` implementations. The interface itself exists (MED-017); nothing scans for it yet. | Same as above. |
-| `AddStreamBehavior`\* / `AddOpenStreamBehavior` on `MediatRServiceConfiguration` | 4 + 1 overloads, mirroring the non-stream behavior registration shape. | Same as above. |
+| Stream assembly scanning | `AddMediatR` discovering `IStreamRequestHandler<,>` implementations. The interface (MED-017) and runtime dispatch (MED-018) both exist; nothing scans for it yet. | High for any streaming consumer relying on `AddMediatR` auto-registration; zero for the CleanArchitecture-style request/response/notification subset, and zero for a consumer willing to register stream handlers manually (fully supported as of MED-018). |
+| `AddStreamBehavior`\* / `AddOpenStreamBehavior` on `MediatRServiceConfiguration` | 4 + 1 overloads, mirroring the non-stream behavior registration shape. | Same as above — manual `services.AddTransient<IStreamPipelineBehavior<,>, ...>()` registration already works against the MED-018 runtime; only the configuration-API convenience is missing. |
 | `INotificationPublisher` | `public interface INotificationPublisher { Task Publish(IEnumerable<NotificationHandlerExecutor>, INotification, CancellationToken); }`, namespace `MediatR`. | Medium — current default behavior (`ForeachAwaitPublisher`) already matches NEXGov.Mediator's hardcoded sequential publish, so most consumers see no difference; only consumers wanting parallel publish or a custom strategy are blocked. |
 | `NotificationHandlerExecutor` | `public record NotificationHandlerExecutor(object HandlerInstance, Func<INotification, CancellationToken, Task> HandlerCallback)`, namespace `MediatR`. | Same as above — supporting type for the publisher abstraction. |
 | `ForeachAwaitPublisher` / `TaskWhenAllPublisher` | Namespace `MediatR.NotificationPublishers`; sequential vs. `Task.WhenAll`-parallel publish strategies. | Same as above. |
@@ -218,7 +220,7 @@ migration status above).
   standard request/response + notification + pipeline consumer needs is
   implemented and verified.
 - **P1 (important current MediatR feature):**
-  - Streaming runtime (`CreateStream` dispatch, handler resolution, assembly scanning, `AddStreamBehavior`\*/`AddOpenStreamBehavior`) — a real, commonly-used MediatR feature with zero current NEXGov.Mediator runtime. The contract layer (`IStreamRequestHandler<,>`, `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`) is implemented as of MED-017.
+  - Streaming assembly scanning/configuration (`AddMediatR` discovery, `AddStreamBehavior`\*/`AddOpenStreamBehavior`) — a real, commonly-used MediatR convenience with no current NEXGov.Mediator equivalent. The contract layer (MED-017) and runtime dispatch (`CreateStream`, handler/behavior resolution and composition, MED-018) are both implemented; only automatic discovery is missing, and manual registration already fully works.
   - Notification publisher abstraction (`INotificationPublisher` and its two built-in strategies, the second `Mediator` constructor) — real public API with zero equivalent, though the default behavior already matches.
 - **P2 (edge/advanced compatibility):**
   - Generic-family expansion beyond request handlers (notifications/exceptions/processors) — real current behavior, narrow practical impact.
@@ -238,7 +240,7 @@ Compatibility Promise").
 
 ## Post-V1 / Optional Features
 
-- Streaming runtime (`CreateStream` dispatch, stream DI registration/scanning, `AddStreamBehavior`\*/`AddOpenStreamBehavior`) — contracts implemented in MED-017.
+- Streaming assembly scanning/configuration (stream DI registration/scanning, `AddStreamBehavior`\*/`AddOpenStreamBehavior`) — contracts implemented in MED-017, runtime dispatch implemented in MED-018 (manual registration only).
 - `INotificationPublisher` abstraction, `TaskWhenAllPublisher`, and the `Mediator(IServiceProvider, INotificationPublisher)` constructor.
 - Generic-family expansion beyond request handlers (`RegisterGenericHandlers` for notifications/exceptions/processors).
 - `AddOpenBehaviors`(plural)/`OpenBehavior` convenience batch registration.
@@ -250,7 +252,7 @@ See "Recommended MED-017+ Task Sequence" in the completion report for the
 full rationale; task list:
 
 - ~~**MED-017** — Streaming Contracts (`IStreamRequestHandler<,>`, `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`)~~ — done.
-- **MED-018** — Streaming Runtime (`CreateStream` dispatch, cancellation, async-enumeration semantics)
+- ~~**MED-018** — Streaming Runtime (`CreateStream` dispatch, cancellation, async-enumeration semantics)~~ — done.
 - **MED-019** — Streaming DI Registration (scanning, `AddStreamBehavior`/`AddOpenStreamBehavior`)
 - **MED-020** — Notification Publisher Compatibility (`INotificationPublisher`, `ForeachAwaitPublisher`/`TaskWhenAllPublisher`, `NotificationHandlerExecutor`, `MediatRServiceConfiguration.NotificationPublisher`/`NotificationPublisherType`, second `Mediator` constructor)
 - **MED-021** — `AddOpenBehaviors`/`OpenBehavior` Batch Registration Compatibility

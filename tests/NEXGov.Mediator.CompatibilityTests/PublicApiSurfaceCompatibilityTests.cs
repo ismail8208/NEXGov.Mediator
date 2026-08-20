@@ -19,10 +19,12 @@ public class PublicApiSurfaceCompatibilityTests
 
         string[] expected =
         [
+            "ForeachAwaitPublisher",
             "IBaseRequest",
             "IMediator",
             "INotification",
             "INotificationHandler`1",
+            "INotificationPublisher",
             "IPipelineBehavior`2",
             "IPublisher",
             "IRequest",
@@ -40,6 +42,7 @@ public class PublicApiSurfaceCompatibilityTests
             "Mediator",
             "MediatRServiceCollectionExtensions",
             "MediatRServiceConfiguration",
+            "NotificationHandlerExecutor",
             "RequestExceptionActionProcessorBehavior`2",
             "RequestExceptionActionProcessorStrategy",
             "RequestExceptionHandlerState`1",
@@ -48,6 +51,7 @@ public class PublicApiSurfaceCompatibilityTests
             "RequestPostProcessorBehavior`2",
             "RequestPreProcessorBehavior`2",
             "StreamHandlerDelegate`1",
+            "TaskWhenAllPublisher",
             "Unit",
         ];
 

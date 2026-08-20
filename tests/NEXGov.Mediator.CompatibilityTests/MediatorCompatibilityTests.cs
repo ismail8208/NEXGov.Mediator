@@ -45,11 +45,24 @@ public class MediatorCompatibilityTests
     }
 
     [Fact]
-    public void Mediator_HasExactlyOnePublicConstructor()
+    public void Mediator_HasExactlyTwoPublicConstructors()
     {
+        // MED-020: verified against current MediatR source — Mediator has
+        // Mediator(IServiceProvider) (delegating to the second overload
+        // with a new ForeachAwaitPublisher()) and
+        // Mediator(IServiceProvider, INotificationPublisher).
         var constructors = typeof(Mediator).GetConstructors(BindingFlags.Public | BindingFlags.Instance);
 
-        Assert.Single(constructors);
+        Assert.Equal(2, constructors.Length);
+    }
+
+    [Fact]
+    public void Mediator_HasExpectedPublicConstructor_AcceptingServiceProviderAndNotificationPublisher()
+    {
+        var constructor = typeof(Mediator).GetConstructor([typeof(IServiceProvider), typeof(INotificationPublisher)]);
+
+        Assert.NotNull(constructor);
+        Assert.True(constructor.IsPublic);
     }
 
     [Fact]

@@ -135,17 +135,68 @@ These extend the runtime dispatch principles above to the publish path.
   closed-generic notification wrapper is cached by notification type; the
   cache never stores a service provider or handler instance, so DI
   lifetimes are respected on every publish.
-- **Default MED-006 publishing is sequential**, awaiting each handler
-  before starting the next — not `Task.WhenAll` — for deterministic
-  execution, predictable exception propagation, and safety with scoped
-  services. A configurable/parallel publishing strategy is not part of
-  MED-006.
-- **Provider registration order is preserved.** Handlers run in the order
-  `IServiceProvider` returns them; they are never reordered (e.g.
-  alphabetically or by type name).
-- **An exception from any handler stops sequential publishing** for that
-  call and propagates unchanged (not wrapped) to the caller; handlers
-  after the failing one do not run.
+- **Provider registration order is preserved into the executor
+  sequence.** Handlers are gathered in the order `IServiceProvider`
+  returns them, deduplicated by concrete runtime `Type` (see below), and
+  handed to the configured strategy in that order; the wrapper itself
+  never reorders them.
+- **Resolved handlers are deduplicated by concrete runtime `Type`
+  before becoming executors** (verified against current MediatR source,
+  MED-020): if the same handler *type* is somehow resolved more than
+  once for one notification, only the first-resolved instance executes.
+  This only matters for same-type collisions (e.g. an unusual manual
+  registration); the ordinary case — distinct handler classes discovered
+  by scanning — is unaffected.
+
+## Notification publisher strategy principles (MED-020)
+
+`Mediator.Publish` owns no execution-order/concurrency logic itself. It
+resolves handlers, builds a `NotificationHandlerExecutor` per handler
+(pairing the resolved instance with a callback that invokes its `Handle`
+method), and hands the sequence to the configured `INotificationPublisher`
+— the same split current MediatR uses.
+
+- **`Mediator` delegates entirely to `INotificationPublisher`.** Neither
+  `Publish<TNotification>` nor `Publish(object)` contains a fallback loop
+  of its own; both routes converge on the same `PublishCore` method,
+  which forwards to the configured publisher unconditionally — verified
+  by a publisher that never invokes a handler still receiving the full
+  executor sequence.
+- **The default strategy is `ForeachAwaitPublisher`** — sequential,
+  awaiting each handler before starting the next, stopping and
+  propagating unchanged on the first exception. A consumer doing only
+  `services.AddMediatR(...)` (no publisher configuration) observes
+  identical behavior to before MED-020.
+- **`TaskWhenAllPublisher` provides concurrent execution**: every
+  handler's callback is invoked up front (starting its work immediately,
+  without waiting for earlier ones), then all are awaited together via
+  `Task.WhenAll`. If multiple handlers fail, every handler still runs to
+  completion; awaiting the publisher's returned task surfaces one
+  exception (standard `Task.WhenAll`/`await` unwrapping) — no custom
+  aggregation is layered on top.
+- **A custom `INotificationPublisher` can fully control execution**: it
+  receives the same `NotificationHandlerExecutor` sequence and may
+  inspect `HandlerInstance`, reorder, skip entries, or run only a subset
+  — the mediator does not constrain what a strategy does with what it's
+  given.
+- **Strategies never own handler lifetime.** A `NotificationHandlerExecutor`
+  carries a resolved instance and a callback closure, not a factory; DI
+  scoping is already resolved by the time a strategy sees it, and no
+  strategy caches instances across publishes.
+- **`Mediator`'s two constructors select the strategy.** `Mediator(IServiceProvider)`
+  uses `ForeachAwaitPublisher`; `Mediator(IServiceProvider, INotificationPublisher)`
+  uses the supplied strategy. `AddMediatR` never constructs `Mediator`
+  directly — it registers both `IMediator` and `INotificationPublisher`
+  as services, and ordinary Microsoft.Extensions.DependencyInjection
+  constructor selection (which prefers the constructor with the most
+  satisfiable parameters) automatically resolves the two-parameter
+  constructor once a publisher is registered. This is the same mechanism
+  current MediatR itself relies on — no bespoke construction logic exists
+  in `ServiceRegistrar`.
+- **`Send` and `CreateStream` are entirely unaffected.** The notification
+  publisher strategy participates only in the `Publish` path; it has no
+  visibility into request or stream dispatch, matching current MediatR
+  (which has no such cross-wiring either).
 
 ## Pipeline principles
 

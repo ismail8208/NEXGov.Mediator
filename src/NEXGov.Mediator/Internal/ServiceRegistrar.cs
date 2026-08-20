@@ -74,6 +74,22 @@ internal static class ServiceRegistrar
         services.TryAdd(new ServiceDescriptor(typeof(ISender), sp => sp.GetRequiredService<IMediator>(), configuration.Lifetime));
         services.TryAdd(new ServiceDescriptor(typeof(IPublisher), sp => sp.GetRequiredService<IMediator>(), configuration.Lifetime));
 
+        // NotificationPublisherType (if set) always takes precedence over
+        // the NotificationPublisher instance, verified against current
+        // source — regardless of the order the two properties were
+        // assigned in configuration code, only their final values matter
+        // here. Registering INotificationPublisher lets ordinary
+        // Microsoft.Extensions.DependencyInjection constructor selection
+        // pick Mediator's two-parameter constructor automatically when
+        // Mediator is itself resolved from the container (it always
+        // prefers the constructor with the most satisfiable parameters) —
+        // no custom Mediator-construction logic is needed here.
+        var notificationPublisherDescriptor = configuration.NotificationPublisherType is not null
+            ? new ServiceDescriptor(typeof(INotificationPublisher), configuration.NotificationPublisherType, configuration.Lifetime)
+            : new ServiceDescriptor(typeof(INotificationPublisher), configuration.NotificationPublisher);
+
+        services.TryAdd(notificationPublisherDescriptor);
+
         services.TryAddSingleton(configuration);
 
         // Only wire an exception behavior into the pipeline if a matching

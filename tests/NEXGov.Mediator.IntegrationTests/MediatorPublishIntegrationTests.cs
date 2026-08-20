@@ -18,7 +18,7 @@ public class MediatorPublishIntegrationTests
         services.AddScoped<INotificationHandler<OrderPlaced>>(sp =>
             new AuditingNotificationHandler("first", sp.GetRequiredService<IOrderAudit>(), log));
         services.AddScoped<INotificationHandler<OrderPlaced>>(sp =>
-            new AuditingNotificationHandler("second", sp.GetRequiredService<IOrderAudit>(), log));
+            new SecondAuditingNotificationHandler("second", sp.GetRequiredService<IOrderAudit>(), log));
         services.AddScoped<Mediator>();
         services.AddScoped<IPublisher>(sp => sp.GetRequiredService<Mediator>());
         services.AddScoped<IMediator>(sp => sp.GetRequiredService<Mediator>());

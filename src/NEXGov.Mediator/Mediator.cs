@@ -1,4 +1,5 @@
 using NEXGov.Mediator.Internal;
+using NEXGov.Mediator.NotificationPublishers;
 
 namespace NEXGov.Mediator;
 
@@ -10,17 +11,34 @@ namespace NEXGov.Mediator;
 public class Mediator : IMediator
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly INotificationPublisher _publisher;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Mediator"/> class.
+    /// Initializes a new instance of the <see cref="Mediator"/> class,
+    /// using <see cref="ForeachAwaitPublisher"/> (sequential handler
+    /// execution) as the notification publishing strategy.
     /// </summary>
     /// <param name="serviceProvider">The service provider used to resolve request handlers for each dispatched request.</param>
     /// <exception cref="ArgumentNullException"><paramref name="serviceProvider"/> is <see langword="null"/>.</exception>
     public Mediator(IServiceProvider serviceProvider)
+        : this(serviceProvider, new ForeachAwaitPublisher())
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Mediator"/> class
+    /// with an explicit notification publishing strategy.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider used to resolve request handlers for each dispatched request.</param>
+    /// <param name="publisher">The strategy used to execute the handlers resolved for each published notification.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="serviceProvider"/> or <paramref name="publisher"/> is <see langword="null"/>.</exception>
+    public Mediator(IServiceProvider serviceProvider, INotificationPublisher publisher)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(publisher);
 
         _serviceProvider = serviceProvider;
+        _publisher = publisher;
     }
 
     /// <inheritdoc/>
@@ -106,7 +124,7 @@ public class Mediator : IMediator
 
         var wrapper = NotificationHandlerWrapperCache.GetWrapper(notification.GetType());
 
-        await wrapper.Handle(notification, _serviceProvider, cancellationToken).ConfigureAwait(false);
+        await wrapper.Handle(notification, _serviceProvider, PublishCore, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -125,8 +143,21 @@ public class Mediator : IMediator
 
         var wrapper = NotificationHandlerWrapperCache.GetWrapper(notification.GetType());
 
-        await wrapper.Handle(notification, _serviceProvider, cancellationToken).ConfigureAwait(false);
+        await wrapper.Handle(notification, _serviceProvider, PublishCore, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Executes the resolved handlers for a published notification by
+    /// delegating to the configured <see cref="INotificationPublisher"/>.
+    /// Override in a derived class to add cross-cutting behavior around
+    /// every publish, regardless of the configured strategy.
+    /// </summary>
+    /// <param name="handlerExecutors">The handlers registered for the notification's concrete type, in provider order.</param>
+    /// <param name="notification">The notification being published.</param>
+    /// <param name="cancellationToken">The token used to observe cancellation of the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    protected virtual Task PublishCore(IEnumerable<NotificationHandlerExecutor> handlerExecutors, INotification notification, CancellationToken cancellationToken)
+        => _publisher.Publish(handlerExecutors, notification, cancellationToken);
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException"><paramref name="request"/> is <see langword="null"/>.</exception>

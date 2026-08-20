@@ -54,8 +54,8 @@ public class MediatorPublishTests
         var mediator = CreateMediator(s =>
         {
             s.AddSingleton<INotificationHandler<UserCreated>>(new RecordingNotificationHandler("A", log));
-            s.AddSingleton<INotificationHandler<UserCreated>>(new RecordingNotificationHandler("B", log));
-            s.AddSingleton<INotificationHandler<UserCreated>>(new RecordingNotificationHandler("C", log));
+            s.AddSingleton<INotificationHandler<UserCreated>>(new SecondRecordingNotificationHandler("B", log));
+            s.AddSingleton<INotificationHandler<UserCreated>>(new ThirdRecordingNotificationHandler("C", log));
         });
 
         await mediator.Publish(new UserCreated("alice"));
@@ -70,8 +70,8 @@ public class MediatorPublishTests
         var mediator = CreateMediator(s =>
         {
             s.AddSingleton<INotificationHandler<UserCreated>>(new RecordingNotificationHandler("third", log));
-            s.AddSingleton<INotificationHandler<UserCreated>>(new RecordingNotificationHandler("first", log));
-            s.AddSingleton<INotificationHandler<UserCreated>>(new RecordingNotificationHandler("second", log));
+            s.AddSingleton<INotificationHandler<UserCreated>>(new SecondRecordingNotificationHandler("first", log));
+            s.AddSingleton<INotificationHandler<UserCreated>>(new ThirdRecordingNotificationHandler("second", log));
         });
 
         await mediator.Publish(new UserCreated("alice"));
@@ -94,7 +94,7 @@ public class MediatorPublishTests
     {
         var log = new List<string>();
         var handlerA = new RecordingNotificationHandler("A", log);
-        var handlerB = new RecordingNotificationHandler("B", log);
+        var handlerB = new SecondRecordingNotificationHandler("B", log);
         var mediator = CreateMediator(s =>
         {
             s.AddSingleton<INotificationHandler<UserCreated>>(handlerA);
@@ -113,7 +113,7 @@ public class MediatorPublishTests
     {
         var log = new List<string>();
         var handlerA = new RecordingNotificationHandler("A", log);
-        var handlerC = new RecordingNotificationHandler("C", log);
+        var handlerC = new SecondRecordingNotificationHandler("C", log);
         var mediator = CreateMediator(s =>
         {
             s.AddSingleton<INotificationHandler<UserCreated>>(handlerA);
@@ -146,7 +146,7 @@ public class MediatorPublishTests
         var mediator = CreateMediator(s =>
         {
             s.AddSingleton<INotificationHandler<UserCreated>>(new RecordingNotificationHandler("A", log));
-            s.AddSingleton<INotificationHandler<UserCreated>>(new RecordingNotificationHandler("B", log));
+            s.AddSingleton<INotificationHandler<UserCreated>>(new SecondRecordingNotificationHandler("B", log));
         });
 
         await mediator.Publish((object)new UserCreated("alice"));

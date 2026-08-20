@@ -8,10 +8,11 @@ request handling.
 ## Status: early development
 
 This repository is in **early development**. Requests, handlers, `Send`
-dispatch, notifications/`Publish`, pipeline behaviors, pre/post
-processors, exception handlers/actions, and dependency-injection
-registration (`AddMediatR` with assembly scanning, plus explicit
-`AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
+dispatch, notifications/`Publish` (with a pluggable, DI-configurable
+`INotificationPublisher` strategy — sequential by default), pipeline
+behaviors, pre/post processors, exception handlers/actions, and
+dependency-injection registration (`AddMediatR` with assembly scanning,
+plus explicit `AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
 registration) are implemented and tested. Streaming (request/handler/behavior
 contracts, runtime execution, and `AddMediatR` scanning/`AddStreamBehavior`/
 `AddOpenStreamBehavior` registration) is implemented and tested for closed
@@ -130,6 +131,35 @@ of its own — see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for why.
 same scope narrowing applies to streams). See
 [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture.
 
+### Notification publishing strategy
+
+By default, `Publish` awaits each notification handler sequentially, in
+provider registration order — this is the default even if you never
+touch the setting below. A pluggable strategy is available for consumers
+who want something else:
+
+```csharp
+using NEXGov.Mediator.NotificationPublishers;
+
+services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssemblyContaining<Program>();
+
+    // Runs every handler concurrently instead of one at a time.
+    cfg.NotificationPublisherType = typeof(TaskWhenAllPublisher);
+});
+```
+
+`cfg.NotificationPublisher = mySpecificInstance;` registers an exact
+instance instead of a DI-constructed type; if both are set,
+`NotificationPublisherType` always wins. Implement `INotificationPublisher`
+directly for full control over handler ordering/skipping/concurrency —
+see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the strategy
+model. **The sequential `ForeachAwaitPublisher` remains the recommended
+default** for predictable ordering and safety with scoped dependencies;
+reach for `TaskWhenAllPublisher`/a custom strategy only when handlers are
+independent and concurrency is actually wanted.
+
 ### Generic request handlers
 
 Off by default. Enable it to have scanning expand an open-generic
@@ -224,6 +254,12 @@ is used as a compatibility reference.
       registration for closed stream handlers — generic stream-handler
       expansion under `RegisterGenericHandlers` remains a documented gap,
       see `docs/COMPATIBILITY-AUDIT.md`)
+- [x] Pluggable notification publishing (`INotificationPublisher`,
+      `NotificationHandlerExecutor`, `ForeachAwaitPublisher` (default,
+      sequential), `TaskWhenAllPublisher` (concurrent),
+      `MediatRServiceConfiguration.NotificationPublisher`/`NotificationPublisherType`,
+      and the `Mediator(IServiceProvider, INotificationPublisher)`
+      constructor)
 - [ ] Compatibility test suite covering the V1 Required and V1 Extended
       surface
 

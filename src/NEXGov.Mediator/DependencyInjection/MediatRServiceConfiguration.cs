@@ -1,6 +1,7 @@
 using System.Reflection;
 using NEXGov.Mediator;
 using NEXGov.Mediator.Internal;
+using NEXGov.Mediator.NotificationPublishers;
 using NEXGov.Mediator.Pipeline;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,23 @@ public class MediatRServiceConfiguration
     /// <see cref="IPublisher"/>. Default value is <see cref="ServiceLifetime.Transient"/>.
     /// </summary>
     public ServiceLifetime Lifetime { get; set; } = ServiceLifetime.Transient;
+
+    /// <summary>
+    /// Gets or sets the notification publishing strategy instance to register. Default value is a new
+    /// <see cref="ForeachAwaitPublisher"/> (sequential handler execution). Ignored if
+    /// <see cref="NotificationPublisherType"/> is set — that property always takes precedence when non-null,
+    /// regardless of the order the two properties are assigned in.
+    /// </summary>
+    public INotificationPublisher NotificationPublisher { get; set; } = new ForeachAwaitPublisher();
+
+    /// <summary>
+    /// Gets or sets the notification publishing strategy type to register. If set (non-null), overrides
+    /// <see cref="NotificationPublisher"/>: the type is registered against <see cref="INotificationPublisher"/>
+    /// using <see cref="Lifetime"/>, and Microsoft.Extensions.DependencyInjection constructs it (and resolves
+    /// its own constructor dependencies) rather than reusing the <see cref="NotificationPublisher"/> instance.
+    /// Default value is <see langword="null"/>.
+    /// </summary>
+    public Type? NotificationPublisherType { get; set; }
 
     /// <summary>
     /// Gets or sets the strategy controlling the registration order of

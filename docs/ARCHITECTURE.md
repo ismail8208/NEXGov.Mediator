@@ -217,6 +217,49 @@ MediatR's `MediatR.Pipeline`).
   `Send` pipeline; notification publishing (MED-006) has no concept of
   pre/post-processors.
 
+## Exception-pipeline principles
+
+Introduced in MED-009 alongside `IRequestExceptionHandler<TRequest, TResponse, TException>`,
+`RequestExceptionHandlerState<TResponse>`, `IRequestExceptionAction<TRequest, TException>`,
+and their standard
+`RequestExceptionProcessorBehavior<,>`/`RequestExceptionActionProcessorBehavior<,>`
+pipeline behaviors (namespace `NEXGov.Mediator.Pipeline`).
+
+- **Exception processing is implemented through ordinary pipeline
+  behaviors**, exactly like pre/post-processors — there is no separate
+  execution mechanism.
+- **`Mediator` does not special-case exception handling.** Neither `Send`
+  nor `RequestHandlerWrapper` has any knowledge of exception
+  handlers/actions; `RequestExceptionProcessorBehavior<,>`/`RequestExceptionActionProcessorBehavior<,>`
+  only run when registered as ordinary `IPipelineBehavior<,>` instances.
+- **A handler may convert an exception into a response** by calling
+  `RequestExceptionHandlerState<TResponse>.SetHandled(response)`; an
+  **action only observes** an exception (for logging, metrics, etc.) and
+  can never turn it into a response — the original exception always
+  propagates after every applicable action has run.
+- **Exception type matching tries the exact thrown type first, then each
+  base type up the chain**, stopping before `object`; the handler
+  behavior stops at the first handler that marks the exception handled,
+  the action behavior always runs every applicable action regardless.
+  Ordering among multiple handlers/actions registered for the *same*
+  exception type follows plain DI/provider order — this project
+  deliberately does not replicate MediatR's additional internal
+  assembly/namespace-proximity tie-breaking heuristic (that mechanism is
+  implemented via non-public MediatR types and is not part of the public
+  API surface); see `docs/COMPATIBILITY.md` for the full rationale.
+- **Processor instances remain DI-owned** — resolved fresh per exception,
+  never cached; only the closed-generic dispatch metadata used to invoke
+  a handler/action without reflection at the call site may be cached.
+- **Behavior registration order controls composition**, including
+  whether an exception action observes an exception that a
+  differently-positioned handler behavior later recovers — putting the
+  handler behavior closer to the handler (more inner) lets it resolve the
+  exception before an outer action behavior ever sees it; the reverse
+  order guarantees actions see every exception regardless of whether it's
+  later handled.
+- **`Publish` is unaffected** — request exception processing participates
+  only in the `Send` pipeline.
+
 ## Non-goals
 
 - Reproducing MediatR's internal class structure or implementation

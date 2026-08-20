@@ -11,7 +11,11 @@ namespace NEXGov.Mediator.Pipeline;
 /// exception handled. Register this behavior as an ordinary
 /// <see cref="IPipelineBehavior{TRequest, TResponse}"/> to opt a request
 /// pipeline into exception handling; its position among other behaviors
-/// is determined by registration order like any other behavior.
+/// is determined by registration order like any other behavior. Within
+/// each exception type, handlers are prioritized by request/handler type
+/// proximity (MED-015) — see <c>Internal.HandlerPriorityOrderer</c> — before
+/// being invoked in that order; this does not affect where this behavior
+/// itself sits relative to other pipeline behaviors.
 /// </summary>
 /// <typeparam name="TRequest">The type of request being handled.</typeparam>
 /// <typeparam name="TResponse">The type of response produced by the request.</typeparam>
@@ -50,9 +54,11 @@ public class RequestExceptionProcessorBehavior<TRequest, TResponse> : IPipelineB
                     continue;
                 }
 
+                var prioritizedHandlers = HandlerPriorityOrderer.Prioritize(handlers.ToArray(), typeof(TRequest));
+
                 var invoker = RequestExceptionInvokerCache.GetHandlerInvoker(typeof(TRequest), typeof(TResponse), exceptionType);
 
-                foreach (var handler in handlers)
+                foreach (var handler in prioritizedHandlers)
                 {
                     await invoker.Invoke(handler, request, exception, state, cancellationToken).ConfigureAwait(false);
 

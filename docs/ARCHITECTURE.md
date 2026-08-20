@@ -292,12 +292,24 @@ pipeline behaviors (namespace `NEXGov.Mediator.Pipeline`).
   base type up the chain**, stopping before `object`; the handler
   behavior stops at the first handler that marks the exception handled,
   the action behavior always runs every applicable action regardless.
-  Ordering among multiple handlers/actions registered for the *same*
-  exception type follows plain DI/provider order — this project
-  deliberately does not replicate MediatR's additional internal
-  assembly/namespace-proximity tie-breaking heuristic (that mechanism is
-  implemented via non-public MediatR types and is not part of the public
-  API surface); see `docs/COMPATIBILITY.md` for the full rationale.
+  Exception-type specificity is the **primary** ordering dimension —
+  handler/action proximity ordering (below) only ever reorders candidates
+  *within* one exception-type group, never lets a proximate base-type
+  handler run ahead of an exact-type one.
+- **Within one exception-type group, handler/action proximity is the
+  secondary ordering dimension (MED-015).** `Internal.HandlerPriorityOrderer`
+  reorders the resolved candidates for that group using request/handler
+  type metadata (assembly, then namespace, per the verified algorithm in
+  `docs/COMPATIBILITY.md`) — an independent reimplementation of current
+  MediatR's own `HandlersOrderer`/`ObjectDetails` observable behavior, not
+  a copy and not exposed publicly. It never touches an `IServiceProvider`,
+  never caches a handler, and never reorders ordinary DI service
+  registrations (`IRequestHandler<,>`, `INotificationHandler<>`,
+  `IPipelineBehavior<,>` all remain governed purely by provider order,
+  same as before MED-015) — its effect is scoped entirely to the
+  candidate list resolved for one exception-type level inside
+  `RequestExceptionProcessorBehavior<,>`/`RequestExceptionActionProcessorBehavior<,>`.
+  Handlers and actions share the same priority model.
 - **Processor instances remain DI-owned** — resolved fresh per exception,
   never cached; only the closed-generic dispatch metadata used to invoke
   a handler/action without reflection at the call site may be cached.

@@ -74,12 +74,23 @@ public class RequestExceptionHandlerBehaviorTests
     }
 
     [Fact]
-    public async Task MultipleHandlersAtSameExceptionType_ExecuteInProviderOrder_UntilOneHandles()
+    public async Task MultipleHandlersAtSameExceptionType_SamePriority_ExecuteInProviderOrder_UntilOneHandles()
     {
+        // MED-015: verified against current MediatR source, handler
+        // proximity ordering (HandlerPriorityOrderer) only reorders
+        // handlers that actually differ in assembly/namespace proximity
+        // to the request. FirstTiedExceptionHandler/SecondTiedExceptionHandler/
+        // ThirdTiedExceptionHandler are three DISTINCT concrete types (not
+        // one generic type instantiated three times — see the fixtures'
+        // own doc comment for why that would collapse to a single
+        // execution instead) declared in the same namespace as Ping, so
+        // they are a genuine same-priority tie; the only remaining
+        // tie-break is provider/registration order, exactly as before
+        // MED-015 for this specific (equal-proximity) case.
         var log = new List<string>();
-        var first = new RecordingExceptionHandler<CustomValidationException>("first", log);
-        var second = new RecordingExceptionHandler<CustomValidationException>("second", log, markHandled: true);
-        var third = new RecordingExceptionHandler<CustomValidationException>("third", log, markHandled: true);
+        var first = new FirstTiedExceptionHandler(log);
+        var second = new SecondTiedExceptionHandler(log);
+        var third = new ThirdTiedExceptionHandler(log);
 
         var behavior = CreateBehavior(s =>
         {

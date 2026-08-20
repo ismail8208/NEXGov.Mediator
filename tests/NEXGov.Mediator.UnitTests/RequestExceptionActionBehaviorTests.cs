@@ -64,11 +64,15 @@ public class RequestExceptionActionBehaviorTests
     }
 
     [Fact]
-    public async Task MultipleActionsAtSameExceptionType_ExecuteInProviderOrder()
+    public async Task MultipleActionsAtSameExceptionType_SamePriority_ExecuteInProviderOrder()
     {
+        // MED-015: see the equivalent handler test's comment
+        // (RequestExceptionHandlerBehaviorTests.MultipleHandlersAtSameExceptionType_SamePriority_...)
+        // for why these must be distinct concrete types rather than one
+        // generic type instantiated twice.
         var log = new List<string>();
-        var first = new RecordingExceptionAction<CustomValidationException>("first", log);
-        var second = new RecordingExceptionAction<CustomValidationException>("second", log);
+        var first = new FirstTiedExceptionAction(log);
+        var second = new SecondTiedExceptionAction(log);
 
         var behavior = CreateBehavior(s =>
         {

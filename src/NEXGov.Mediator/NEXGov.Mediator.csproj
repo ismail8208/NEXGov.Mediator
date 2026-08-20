@@ -30,4 +30,11 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- MED-015: lets NEXGov.Mediator.UnitTests exercise HandlerPriorityOrderer
+         directly. Build-time only — internal members stay internal to every
+         consumer outside this one named test assembly; adds no public API. -->
+    <InternalsVisibleTo Include="NEXGov.Mediator.UnitTests" />
+  </ItemGroup>
+
 </Project>

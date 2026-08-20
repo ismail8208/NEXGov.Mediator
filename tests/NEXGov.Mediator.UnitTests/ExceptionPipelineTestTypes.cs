@@ -70,6 +70,76 @@ internal sealed class ThrowingExceptionHandler<TException> : IRequestExceptionHa
     }
 }
 
+// MED-015: three DISTINCT concrete handler types (not the same generic
+// class instantiated three times) targeting the exact same exception
+// type, all declared in this same file/namespace as Ping — so all three
+// are equidistant from the request under HandlerPriorityOrderer, making
+// this a genuine same-priority tie whose only remaining tie-break is
+// provider/registration order. Three instances of the SAME closed
+// generic type (e.g. RecordingExceptionHandler<CustomValidationException>
+// three times) would instead collapse to one execution via
+// HandlerPriorityOrderer's overridden-type removal (a type is trivially
+// assignable from itself) — a real, verified current-source behavior,
+// not something to work around here.
+internal sealed class FirstTiedExceptionHandler : IRequestExceptionHandler<Ping, Pong, CustomValidationException>
+{
+    private readonly List<string> _log;
+
+    public FirstTiedExceptionHandler(List<string> log)
+    {
+        _log = log;
+    }
+
+    public int CallCount { get; private set; }
+
+    public Task Handle(Ping request, CustomValidationException exception, RequestExceptionHandlerState<Pong> state, CancellationToken cancellationToken)
+    {
+        CallCount++;
+        _log.Add("first");
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class SecondTiedExceptionHandler : IRequestExceptionHandler<Ping, Pong, CustomValidationException>
+{
+    private readonly List<string> _log;
+
+    public SecondTiedExceptionHandler(List<string> log)
+    {
+        _log = log;
+    }
+
+    public int CallCount { get; private set; }
+
+    public Task Handle(Ping request, CustomValidationException exception, RequestExceptionHandlerState<Pong> state, CancellationToken cancellationToken)
+    {
+        CallCount++;
+        _log.Add("second");
+        state.SetHandled(new Pong("handled"));
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class ThirdTiedExceptionHandler : IRequestExceptionHandler<Ping, Pong, CustomValidationException>
+{
+    private readonly List<string> _log;
+
+    public ThirdTiedExceptionHandler(List<string> log)
+    {
+        _log = log;
+    }
+
+    public int CallCount { get; private set; }
+
+    public Task Handle(Ping request, CustomValidationException exception, RequestExceptionHandlerState<Pong> state, CancellationToken cancellationToken)
+    {
+        CallCount++;
+        _log.Add("third");
+        state.SetHandled(new Pong("handled"));
+        return Task.CompletedTask;
+    }
+}
+
 internal sealed class RecordingExceptionAction<TException> : IRequestExceptionAction<Ping, TException>
     where TException : Exception
 {
@@ -112,6 +182,46 @@ internal sealed class ThrowingExceptionAction<TException> : IRequestExceptionAct
     {
         _log.Add("throwing-action");
         throw new HandlerException("exception action failure");
+    }
+}
+
+// MED-015: two DISTINCT concrete action types for the same same-priority-tie
+// reason documented on FirstTiedExceptionHandler/SecondTiedExceptionHandler above.
+internal sealed class FirstTiedExceptionAction : IRequestExceptionAction<Ping, CustomValidationException>
+{
+    private readonly List<string> _log;
+
+    public FirstTiedExceptionAction(List<string> log)
+    {
+        _log = log;
+    }
+
+    public int CallCount { get; private set; }
+
+    public Task Execute(Ping request, CustomValidationException exception, CancellationToken cancellationToken)
+    {
+        CallCount++;
+        _log.Add("first");
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class SecondTiedExceptionAction : IRequestExceptionAction<Ping, CustomValidationException>
+{
+    private readonly List<string> _log;
+
+    public SecondTiedExceptionAction(List<string> log)
+    {
+        _log = log;
+    }
+
+    public int CallCount { get; private set; }
+
+    public Task Execute(Ping request, CustomValidationException exception, CancellationToken cancellationToken)
+    {
+        CallCount++;
+        _log.Add("second");
+        return Task.CompletedTask;
     }
 }
 

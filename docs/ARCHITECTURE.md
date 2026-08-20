@@ -43,10 +43,18 @@ the request/handler pipeline, notification dispatch, and DI integration.
 
 6. **Avoid unnecessary external dependencies.** The production library
    takes on a dependency only when it is required to deliver a specific,
-   scoped piece of supported functionality. Test and benchmark projects
-   may use dependencies appropriate to their purpose (xUnit,
-   BenchmarkDotNet) without that constraint applying to the shipped
-   library.
+   scoped piece of supported functionality, and only the smallest package
+   that provides it. Through MED-009 this meant zero production
+   dependencies. MED-010 introduces exactly one:
+   `Microsoft.Extensions.DependencyInjection.Abstractions` — the minimal
+   package containing `IServiceCollection`/`ServiceDescriptor`/`TryAdd*`,
+   required to implement the public `AddMediatR` registration API at all;
+   the full `Microsoft.Extensions.DependencyInjection` package (the
+   concrete container implementation) is deliberately not referenced,
+   since consumers bring their own container. Test, sample, and benchmark
+   projects may use dependencies appropriate to their purpose (xUnit,
+   BenchmarkDotNet, the concrete DI container) without this constraint
+   applying to them.
 
 7. **Async and `CancellationToken` support are first-class requirements.**
    Every operation that dispatches to user code (handler invocation,
@@ -259,6 +267,117 @@ pipeline behaviors (namespace `NEXGov.Mediator.Pipeline`).
   later handled.
 - **`Publish` is unaffected** — request exception processing participates
   only in the `Send` pipeline.
+
+## DI / assembly-scanning principles
+
+Introduced in MED-010 alongside `AddMediatR`, `MediatRServiceConfiguration`
+(namespace `Microsoft.Extensions.DependencyInjection`, mirroring
+MediatR's own placement), and the internal `ServiceRegistrar`/`AssemblyScanner`.
+
+- **Assemblies are explicitly selected by configuration.** `AddMediatR`
+  scans only the assemblies added via `RegisterServicesFromAssembly`/`RegisterServicesFromAssemblies`/`RegisterServicesFromAssemblyContaining`;
+  nothing is scanned implicitly (e.g. the calling assembly is never
+  assumed).
+- **Scanning registers service types, never instances.** `AssemblyScanner`
+  operates purely on `Type` metadata (`Assembly.DefinedTypes`, interface
+  closure checks) and calls `IServiceCollection.AddTransient`/`TryAddTransient`
+  with `(serviceType, implementationType)` pairs — it never calls a
+  constructor or otherwise creates a handler object.
+- **`IServiceProvider` remains the runtime resolution boundary.**
+  Scanning only populates the `IServiceCollection`; every scanned handler
+  is still resolved through the provider at dispatch time, exactly like a
+  manually-registered one — the MED-005–009 dispatch/pipeline machinery
+  is completely unaware of how a handler was registered.
+- **Scanning does not instantiate handlers**, so a scanned handler with a
+  scoped constructor dependency resolves correctly per-scope, identically
+  to a manually-registered one.
+- **Handler lifetime remains DI-controlled.** Scanned request/notification/exception
+  handlers are registered `Transient` (matching current MediatR's
+  foundational scanning defaults); `IMediator`/`ISender`/`IPublisher` use
+  `MediatRServiceConfiguration.Lifetime` (default `Transient`).
+- **Multiple notification handlers (and exception handlers/actions) are
+  preserved** — scanning uses `AddTransient` (never `TryAdd`) for these
+  families, so every discovered implementation stays registered; request
+  handlers use `TryAddTransient` instead, since exactly one handler per
+  closed request type is expected.
+- **Duplicate registration semantics favor the first-registered
+  request-handler and the last-registered core service.** Scanning the
+  same assembly twice, or two overlapping assembly lists, produces no
+  duplicate request-handler registrations (`TryAddTransient` no-ops after
+  the first). A consumer's own manual handler registration always wins
+  over a scanned one, whether registered before `AddMediatR` (the scan's
+  `TryAddTransient` then no-ops) or after (the manual registration is the
+  last one, and `IServiceProvider.GetService` for a non-enumerable
+  resolution returns the last-registered implementation).
+- **Discovering a processor and executing it are different operations.**
+  Scanning can register `IRequestPreProcessor<T>`/`IRequestPostProcessor<T,TResponse>`
+  implementations as services (when `AutoRegisterRequestProcessors` is
+  set), but that alone does not insert `RequestPreProcessorBehavior<,>`/`RequestPostProcessorBehavior<,>`
+  into the pipeline — matching current MediatR's foundational behavior
+  exactly. Exception handlers/actions are different: their pipeline
+  behaviors **are** auto-wired whenever a matching implementation is
+  discovered, with relative order controlled by
+  `RequestExceptionActionProcessorStrategy`. The explicit MED-011
+  `AddRequestPreProcessor`/`AddRequestPostProcessor` methods are what
+  actually inserts the corresponding behavior for scanned (or manually
+  registered) processors — see the "Advanced registration principles"
+  section below.
+- **Advanced behavior registration is separate from foundational
+  scanning.** `AddBehavior`/`AddOpenBehavior` (MED-011) let a consumer opt
+  arbitrary pipeline behaviors into the pipeline explicitly;
+  `IPipelineBehavior<,>` itself is never scanned for automatically, in
+  either MED-010 or MED-011.
+- **No commercial licensing subsystem.** Current MediatR ships a license
+  validation mechanism (namespace `MediatR.Licensing`) requiring
+  `ILoggerFactory` registration. This is deliberately not part of
+  NEXGov.Mediator at all — it is not public API surface this project
+  targets for compatibility.
+
+## Advanced registration principles
+
+Introduced in MED-011 alongside `MediatRServiceConfiguration.AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddOpenRequestPreProcessor`/`AddRequestPostProcessor`/`AddOpenRequestPostProcessor`.
+
+- **Configuration records service-registration intent; it does not act.**
+  These methods only validate the given type and append a
+  `ServiceDescriptor` to `BehaviorsToRegister`/`RequestPreProcessorsToRegister`/`RequestPostProcessorsToRegister`
+  — they never resolve a service or construct an implementation instance.
+- **`ServiceRegistrar` applies that intent** at `AddMediatR` time, in
+  `AddRequiredServices` — the same method MED-010 already wrote to
+  consume these lists; MED-011 needed **zero changes** to
+  `ServiceRegistrar`, only to `MediatRServiceConfiguration` (the methods
+  that populate the lists it already read).
+- **Runtime instances remain DI-owned.** A behavior/processor registered
+  through this API is resolved by `IServiceProvider` on every dispatch,
+  exactly like a scanned or manually-registered one — nothing here
+  caches an instance outside the container.
+- **Open generic behaviors are closed by Microsoft.Extensions.DependencyInjection**,
+  not by this library — `AddOpenBehavior(typeof(X<,>))` registers the
+  open service/implementation pair, and the container constructs
+  `X<TConcreteRequest, TConcreteResponse>` the first time that closed
+  pairing is resolved.
+- **Configuration order controls pipeline order**, with one caveat:
+  exception behaviors auto-wired by scanning (MED-010) are always
+  registered *before* `BehaviorsToRegister` is consumed, so a custom
+  `AddBehavior`/`AddOpenBehavior` registration is always positioned
+  after (more inner than) them, regardless of call order in user
+  configuration code. Among entries within `BehaviorsToRegister` itself,
+  and among the explicit `AddRequestPreProcessor`/`AddRequestPostProcessor`
+  calls, registration order is preserved exactly.
+- **Processors execute exclusively through the standard processor
+  behaviors** (`RequestPreProcessorBehavior<,>`/`RequestPostProcessorBehavior<,>`)
+  — `AddRequestPreProcessor`/`AddRequestPostProcessor` insert that
+  behavior at most once per `AddMediatR` call (via `TryAddEnumerable`,
+  regardless of how many individual processors were registered), so
+  registering multiple processors never causes duplicate execution.
+- **No special processor or behavior logic exists in `Mediator`.**
+  Everything registered through this API participates as an ordinary
+  `IPipelineBehavior<,>`, exactly like a manually-registered behavior
+  from MED-007.
+- **Scanning and explicit pipeline registration remain distinct
+  mechanisms** — `AutoRegisterRequestProcessors` scanning can discover a
+  processor *class* as a service; only the explicit `AddRequestPreProcessor`/`AddRequestPostProcessor`
+  calls (or a manual `IPipelineBehavior<,>` registration) make any
+  processor actually run.
 
 ## Non-goals
 

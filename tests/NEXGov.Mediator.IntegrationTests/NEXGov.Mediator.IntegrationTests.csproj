@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NEXGov.Mediator\NEXGov.Mediator.csproj" />
+    <ProjectReference Include="..\..\samples\NEXGov.Mediator.Sample\NEXGov.Mediator.Sample.csproj" />
   </ItemGroup>
 
 </Project>

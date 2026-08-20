@@ -7,11 +7,91 @@ request handling.
 
 ## Status: early development
 
-This repository is in **early development**. Foundational project
-structure and tooling are in place; the mediator runtime itself (request
-contracts, handlers, dispatch, notifications, pipeline behaviors,
-dependency-injection registration) has not been implemented yet. Nothing
-in this repository is ready for production use.
+This repository is in **early development**. Requests, handlers, `Send`
+dispatch, notifications/`Publish`, pipeline behaviors, pre/post
+processors, exception handlers/actions, and dependency-injection
+registration (`AddMediatR` with assembly scanning, plus explicit
+`AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
+registration) are implemented and tested. Streaming requests are not
+implemented yet. Nothing in this repository has had a stable release;
+treat it as pre-release.
+
+## Quick start
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using NEXGov.Mediator;
+
+var services = new ServiceCollection();
+
+services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssemblyContaining<Program>();
+});
+
+var provider = services.BuildServiceProvider();
+var mediator = provider.GetRequiredService<IMediator>();
+
+var response = await mediator.Send(new Ping("hello"));
+Console.WriteLine(response.Message); // "hello"
+
+public sealed record Ping(string Message) : IRequest<Pong>;
+
+public sealed record Pong(string Message);
+
+public sealed class PingHandler : IRequestHandler<Ping, Pong>
+{
+    public Task<Pong> Handle(Ping request, CancellationToken cancellationToken)
+        => Task.FromResult(new Pong(request.Message));
+}
+```
+
+`AddMediatR` scans the given assembly (or assemblies) for
+`IRequestHandler<,>`, `IRequestHandler<>`, `INotificationHandler<>`, and
+`IRequestExceptionHandler<,,>`/`IRequestExceptionAction<,>`
+implementations and registers them automatically, alongside `IMediator`,
+`ISender`, and `IPublisher` — no manual handler registration needed. See
+[`samples/NEXGov.Mediator.Sample`](./samples/NEXGov.Mediator.Sample) for
+a complete runnable example, including a notification/`Publish` usage.
+
+### Pipeline behaviors
+
+Handlers are discovered automatically by scanning, but arbitrary
+cross-cutting pipeline behaviors are configured explicitly — matching the
+intended MediatR registration model, where scanning finds *your*
+handlers but you opt in to *behaviors* deliberately:
+
+```csharp
+services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssemblyContaining<Program>();
+
+    // Applies to every request automatically closed by Microsoft.Extensions.DependencyInjection.
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+});
+
+public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
+{
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        // validate `request` here, throw or short-circuit as needed
+        return await next(cancellationToken);
+    }
+}
+```
+
+Behaviors registered earlier wrap those registered later (first
+registered is outermost). `AddBehavior<T>()` registers a **closed**
+behavior targeting one specific request/response pair instead.
+`AddRequestPreProcessor`/`AddRequestPostProcessor` (and their
+`AddOpen*` variants) register pre/post processors the same way.
+
+**Not yet supported:** streaming
+(`IStreamRequest<TResponse>`/`CreateStream`). See
+[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture,
+including which parts of `AddMediatR` scanning currently register a
+service versus actually wire it into request execution.
 
 ## Compatibility goal
 
@@ -57,13 +137,18 @@ is used as a compatibility reference.
 ## Roadmap (high level)
 
 - [x] Project foundation and repository structure
-- [ ] Request contracts (`IBaseRequest`, `IRequest`, `IRequest<TResponse>`)
-- [ ] Handler contracts and dispatch (`ISender`, `IRequestHandler<>`)
-- [ ] Notifications and publishing (`IPublisher`, `INotificationHandler<>`)
-- [ ] Pipeline behaviors (`IPipelineBehavior<,>`)
-- [ ] Dependency-injection registration
-  (`Microsoft.Extensions.DependencyInjection` integration)
-- [ ] Pre/post processors and exception handling
+- [x] Request contracts (`IBaseRequest`, `IRequest`, `IRequest<TResponse>`)
+- [x] Handler contracts and dispatch (`ISender`, `IRequestHandler<>`)
+- [x] Notifications and publishing (`IPublisher`, `INotificationHandler<>`)
+- [x] Pipeline behaviors (`IPipelineBehavior<,>`)
+- [x] Pre/post processors and exception handlers/actions
+- [x] Dependency-injection registration (`AddMediatR` with assembly
+      scanning for handlers, notification handlers, and exception
+      handlers/actions)
+- [x] Explicit behavior/processor registration helpers (`AddBehavior`,
+      `AddOpenBehavior`, `AddRequestPreProcessor`,
+      `AddOpenRequestPreProcessor`, `AddRequestPostProcessor`,
+      `AddOpenRequestPostProcessor`)
 - [ ] Streaming requests
 - [ ] Compatibility test suite covering the V1 Required and V1 Extended
       surface

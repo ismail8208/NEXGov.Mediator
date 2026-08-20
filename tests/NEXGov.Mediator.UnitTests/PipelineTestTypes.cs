@@ -3,15 +3,15 @@ namespace NEXGov.Mediator.UnitTests;
 // Shared pipeline behavior test types. Several are deliberately written
 // as OPEN generic behaviors (IPipelineBehavior<TRequest, TResponse> with
 // both parameters left open) rather than closed to a specific response
-// type, because the internal VoidResponse sentinel used for void request
-// pipelines is not public — test code cannot name
-// IPipelineBehavior<PingCommand, VoidResponse> directly, but an
-// open-generic implementation registered via
-// services.AddScoped(typeof(IPipelineBehavior<,>), typeof(X<,>)) is
-// resolved by the DI container regardless, without ever needing to name
-// the closed response type. This mirrors how a real consumer would
-// register a cross-cutting (logging/validation-style) behavior that
-// applies to every request shape.
+// type, mirroring how a real consumer would register a cross-cutting
+// (logging/validation-style) behavior that applies uniformly to every
+// request shape, response-producing and void alike — an open-generic
+// registration closes automatically for whichever TResponse a given
+// request pipeline resolves against (including Unit for void requests
+// since MED-014), with no per-request-shape registration needed. Below,
+// RecordingVoidBehavior is a CLOSED void-targeting fixture
+// (IPipelineBehavior<PingCommand, Unit>), for tests that specifically
+// exercise that (now-authorable) capability.
 
 internal sealed class PipelineLog
 {
@@ -113,6 +113,28 @@ internal sealed class ThrowingOpenBehavior<TRequest, TResponse> : IPipelineBehav
     {
         _log.Entries.Add("Throwing");
         throw new HandlerException("open behavior failure");
+    }
+}
+
+// Closed void-targeting behavior — authorable only since MED-014 (void
+// pipelines now close over the public Unit type).
+internal sealed class RecordingVoidBehavior : IPipelineBehavior<PingCommand, Unit>
+{
+    private readonly string _name;
+    private readonly List<string> _log;
+
+    public RecordingVoidBehavior(string name, List<string> log)
+    {
+        _name = name;
+        _log = log;
+    }
+
+    public async Task<Unit> Handle(PingCommand request, RequestHandlerDelegate<Unit> next, CancellationToken cancellationToken)
+    {
+        _log.Add($"{_name}.Before");
+        var response = await next(cancellationToken).ConfigureAwait(false);
+        _log.Add($"{_name}.After");
+        return response;
     }
 }
 

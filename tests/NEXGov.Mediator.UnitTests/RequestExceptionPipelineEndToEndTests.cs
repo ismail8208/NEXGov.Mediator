@@ -174,18 +174,17 @@ public class RequestExceptionPipelineEndToEndTests
     }
 
     [Fact]
-    public async Task VoidSend_ExceptionHandlerBehavior_OpenGeneric_IsHarmlessNoOp_OriginalExceptionStillPropagates()
+    public async Task VoidSend_ExceptionHandlerBehavior_OpenGeneric_ButNoClosedHandlerRegistered_OriginalExceptionStillPropagates()
     {
-        // IRequestExceptionHandler<TRequest, TResponse, TException>
-        // references TResponse, so a closed void exception handler
-        // (IRequestExceptionHandler<PingCommand, VoidResponse, TException>)
-        // cannot be authored by a consumer — VoidResponse is internal to
-        // the production assembly, extending the existing Unit/VoidResponse
-        // compatibility debt (see docs/COMPATIBILITY.md). Registering
-        // RequestExceptionProcessorBehavior<,> as an open generic for a
-        // void request is still safe: it resolves an empty handler set
-        // at every exception type in the hierarchy and simply rethrows
-        // the original exception, unhandled.
+        // With no IRequestExceptionHandler<PingCommand, Unit, TException>
+        // registered, RequestExceptionProcessorBehavior<,> (open-generic,
+        // closing as RequestExceptionProcessorBehavior<PingCommand, Unit> —
+        // see MED-014) resolves an empty handler set at every exception
+        // type in the hierarchy and simply rethrows the original exception,
+        // unhandled — ordinary "no handler registered" behavior, not a
+        // void-specific limitation (see
+        // VoidSend_ClosedExceptionHandler_HandlesTheException for the now-
+        // authorable closed case).
         var mediator = CreateMediator(s =>
         {
             s.AddSingleton<IRequestHandler<PingCommand>, ThrowingPingCommandHandler>();
@@ -195,6 +194,28 @@ public class RequestExceptionPipelineEndToEndTests
         var exception = await Assert.ThrowsAsync<HandlerException>(() => mediator.Send(new PingCommand("hi")));
 
         Assert.Equal("void handler failure", exception.Message);
+    }
+
+    [Fact]
+    public async Task VoidSend_ClosedExceptionHandler_HandlesTheException()
+    {
+        // MED-014: IRequestExceptionHandler<PingCommand, Unit, TException>
+        // is now authorable — the compatibility gap documented on the test
+        // above (and in earlier revisions of this file) is closed. The
+        // exception becomes handled; Unit travels through the internal
+        // pipeline only — the caller's Send(...) still completes as a
+        // plain Task, with no Unit ever observable from the public API.
+        var log = new List<string>();
+        var mediator = CreateMediator(s =>
+        {
+            s.AddSingleton<IRequestHandler<PingCommand>, ThrowingPingCommandHandler>();
+            s.AddSingleton<IRequestExceptionHandler<PingCommand, Unit, HandlerException>>(new RecordingVoidExceptionHandler<HandlerException>("Handler", log));
+            s.AddScoped(typeof(IPipelineBehavior<,>), typeof(RequestExceptionProcessorBehavior<,>));
+        });
+
+        await mediator.Send(new PingCommand("hi")); // completes without throwing
+
+        Assert.Equal(["Handler"], log);
     }
 
     // --- Cancellation (item 15) ---

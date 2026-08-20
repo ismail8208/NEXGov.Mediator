@@ -42,6 +42,21 @@ public class RequestContractCompatibilityTests
     }
 
     [Fact]
+    public void IRequest_DoesNotInheritIRequestOfUnit()
+    {
+        // MED-014 regression lock: current MediatR keeps IRequest : IBaseRequest
+        // and does NOT revert to IRequest : IRequest<Unit>. Unit exists only
+        // as the internal void-pipeline response representation.
+        Assert.DoesNotContain(typeof(IRequest<Unit>), typeof(IRequest).GetInterfaces());
+    }
+
+    [Fact]
+    public void IRequest_HasNoMembers()
+    {
+        Assert.Empty(typeof(IRequest).GetMembers());
+    }
+
+    [Fact]
     public void IRequestOfTResponse_InheritsIBaseRequest()
     {
         Assert.Contains(typeof(IBaseRequest), typeof(IRequest<>).GetInterfaces());

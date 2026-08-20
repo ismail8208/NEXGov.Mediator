@@ -116,9 +116,8 @@ internal sealed class ThrowingExceptionAction<TException> : IRequestExceptionAct
 }
 
 // Void-request exception action: IRequestExceptionAction<TRequest, TException>
-// never references a response type, so it is directly nameable for void
-// requests with no compatibility gap (unlike IRequestExceptionHandler,
-// see docs/COMPATIBILITY.md).
+// never references a response type, so it was always directly nameable for
+// void requests with no compatibility gap.
 internal sealed class RecordingVoidExceptionAction<TException> : IRequestExceptionAction<PingCommand, TException>
     where TException : Exception
 {
@@ -134,6 +133,29 @@ internal sealed class RecordingVoidExceptionAction<TException> : IRequestExcepti
     public Task Execute(PingCommand request, TException exception, CancellationToken cancellationToken)
     {
         _log.Add(_name);
+        return Task.CompletedTask;
+    }
+}
+
+// Closed void exception handler — authorable only since MED-014 (void
+// pipelines now close over the public Unit type instead of an internal
+// sentinel).
+internal sealed class RecordingVoidExceptionHandler<TException> : IRequestExceptionHandler<PingCommand, Unit, TException>
+    where TException : Exception
+{
+    private readonly string _name;
+    private readonly List<string> _log;
+
+    public RecordingVoidExceptionHandler(string name, List<string> log)
+    {
+        _name = name;
+        _log = log;
+    }
+
+    public Task Handle(PingCommand request, TException exception, RequestExceptionHandlerState<Unit> state, CancellationToken cancellationToken)
+    {
+        _log.Add(_name);
+        state.SetHandled(Unit.Value);
         return Task.CompletedTask;
     }
 }

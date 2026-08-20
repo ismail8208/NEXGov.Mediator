@@ -177,12 +177,55 @@ every `Send` dispatch path.
   the one it received, but it may deliberately substitute a different
   one, which downstream behaviors and the handler then observe instead).
 - **Void (`IRequest`) pipelines reuse the same machinery internally**
-  against a non-public sentinel response type, not a public `Unit` type
-  — see `docs/COMPATIBILITY.md` for the resulting compatibility nuance
-  around closed-generic void-targeted behaviors.
+  against the public `Unit` type (MED-014), so a consumer can author a
+  closed pipeline behavior/post-processor/exception handler that targets a
+  specific void request by name (e.g. `IPipelineBehavior<DeleteUser, Unit>`),
+  exactly as for a response-producing request — see the "Void request
+  pipeline typing" principles below and `docs/COMPATIBILITY.md`'s `Unit`
+  row.
 - **`Publish` does not use request pipeline behaviors.** Notification
   dispatch (MED-006) is unaffected by `IPipelineBehavior`; the two
   mechanisms are intentionally separate.
+
+## Void request pipeline typing
+
+Introduced in MED-014, replacing the internal `VoidResponse` sentinel
+(MED-007–013) with the public `Unit` type.
+
+- **`IRequest`/`IRequestHandler<TRequest>` remain unchanged and
+  Task-based.** `IRequest` still directly inherits only `IBaseRequest` (it
+  does **not** inherit `IRequest<Unit>`), and
+  `IRequestHandler<TRequest>.Handle(...)` still returns a plain `Task`.
+  `Unit` is not part of either contract's public shape — it never appears
+  in a handler's own signature.
+- **`Unit` exists solely so void requests can flow through the same
+  generic, response-shaped pipeline machinery**
+  (`IPipelineBehavior<TRequest, TResponse>`,
+  `IRequestPostProcessor<TRequest, TResponse>`,
+  `IRequestExceptionHandler<TRequest, TResponse, TException>`) as a
+  response-producing request, by giving void dispatch a real, public
+  `TResponse` to close those generic contracts over.
+- **This makes closed, void-targeted pipeline components authorable.** A
+  consumer can now write `IPipelineBehavior<DeleteUser, Unit>`,
+  `IRequestPostProcessor<DeleteUser, Unit>`, or
+  `IRequestExceptionHandler<DeleteUser, Unit, TException>` by name and
+  register them through the ordinary MED-011 APIs
+  (`AddBehavior`/`AddRequestPostProcessor`/scanning-based exception
+  auto-wiring) — impossible while the response type was an internal,
+  non-public sentinel.
+- **`Unit` never leaks from a public `Send` signature.** `RequestHandlerWrapperImpl<TRequest>`
+  (the void dispatch path) always discards the pipeline's `Unit` result
+  before returning: the generic `Send<TRequest>(...)` overload returns a
+  plain `Task`, and the dynamic `Send(object, ...)` overload returns
+  `Task<object?>` that resolves to `null` for a void request — never a
+  boxed `Unit.Value`.
+- **Open-generic registrations close over `Unit` automatically.**
+  `AddOpenBehavior(typeof(LoggingBehavior<,>))` and the open pre/post-processor
+  equivalents already applied uniformly to void and response-producing
+  requests before MED-014 (an open-generic registration doesn't care what
+  `TResponse` ends up being); the only change is that resolution now closes
+  as e.g. `LoggingBehavior<DeleteUser, Unit>` — an ordinary, DI-visible
+  closed type — rather than a type a consumer could never name.
 
 ## Processor principles
 

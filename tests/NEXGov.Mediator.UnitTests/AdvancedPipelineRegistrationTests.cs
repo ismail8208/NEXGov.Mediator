@@ -278,13 +278,15 @@ public class AdvancedPipelineRegistrationTests
     }
 
     [Fact]
-    public async Task VoidRequest_OpenPostProcessor_IsHarmlessNoOp_MatchingExistingVoidResponseLimitation()
+    public async Task VoidRequest_OpenPostProcessor_WithNoClosedProcessorRegistered_IsHarmlessNoOp()
     {
-        // Same documented VoidResponse limitation established in
-        // MED-008/009: IRequestPostProcessor<TRequest, TResponse>
-        // references TResponse, so a closed void post-processor cannot be
-        // authored. Registering the open generic processor/behavior for a
-        // void request is still safe — it resolves an empty processor set.
+        // With no IRequestPostProcessor<ScannedCommand, Unit> registered,
+        // GenericPostProcessor<,> (open-generic, closing as
+        // GenericPostProcessor<ScannedCommand, Unit> — see MED-014)
+        // resolves an empty processor sequence and does nothing — ordinary
+        // "no processors registered" behavior, not a void-specific
+        // limitation (see VoidRequest_ClosedPostProcessor_Executes for the
+        // authorable closed case, using the DeleteUser fixtures).
         var (provider, _) = BuildProvider(cfg =>
         {
             cfg.AddOpenRequestPostProcessor(typeof(GenericPostProcessor<,>));
@@ -294,6 +296,21 @@ public class AdvancedPipelineRegistrationTests
         var sender = provider.GetRequiredService<ISender>();
 
         await sender.Send(new ScannedCommand("hi"));
+    }
+
+    [Fact]
+    public async Task VoidRequest_ClosedPostProcessor_Executes()
+    {
+        // MED-014: a closed void post-processor (IRequestPostProcessor<DeleteUser, Unit>)
+        // is now authorable and executes — the compatibility gap the test
+        // above once documented is closed.
+        var (provider, log) = BuildProvider(cfg => cfg.AddRequestPostProcessor<DeleteUserPostProcessor>());
+        using var _2 = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new DeleteUser(1));
+
+        Assert.Equal(["Handler", "PostProcessor"], log.Entries);
     }
 
     // --- Deduplication call-count tests (item 10) ---

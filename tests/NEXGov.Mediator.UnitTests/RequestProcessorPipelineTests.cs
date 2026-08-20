@@ -319,18 +319,15 @@ public class RequestProcessorPipelineTests
     }
 
     [Fact]
-    public async Task EndToEnd_VoidSend_WithOpenGenericPostProcessorBehavior_IsHarmlessNoOp()
+    public async Task EndToEnd_VoidSend_WithOpenGenericPostProcessorBehavior_ButNoClosedProcessorRegistered_IsHarmlessNoOp()
     {
-        // IRequestPostProcessor<TRequest, TResponse> references TResponse,
-        // so a closed void post-processor (IRequestPostProcessor<PingCommand,
-        // VoidResponse>) cannot be authored by a consumer — VoidResponse is
-        // internal to the production assembly. Registering
-        // RequestPostProcessorBehavior<,> as an open generic is still
-        // safe for void requests: it resolves an empty
-        // IEnumerable<IRequestPostProcessor<PingCommand, VoidResponse>>
-        // and does nothing beyond calling next — proving the pipeline
-        // does not break, even though no actual post-processor can run
-        // for a void request under the current internal model.
+        // With no IRequestPostProcessor<PingCommand, Unit> registered,
+        // RequestPostProcessorBehavior<,> (open-generic, closing as
+        // RequestPostProcessorBehavior<PingCommand, Unit> — see MED-014)
+        // resolves an empty processor set and does nothing beyond calling
+        // next — this is ordinary "no processors registered" behavior, not
+        // a void-specific limitation (see EndToEnd_VoidSend_WithClosedPostProcessor_Executes
+        // for the now-authorable closed case).
         var handler = new PingCommandHandler();
         var mediator = CreateMediator(s =>
         {
@@ -341,6 +338,27 @@ public class RequestProcessorPipelineTests
         await mediator.Send(new PingCommand("hi"));
 
         Assert.True(handler.WasCalled);
+    }
+
+    [Fact]
+    public async Task EndToEnd_VoidSend_WithClosedPostProcessor_Executes()
+    {
+        // MED-014: IRequestPostProcessor<PingCommand, Unit> is now
+        // authorable and executable — the compatibility gap documented on
+        // the test above (and in earlier revisions of this file) is closed.
+        var log = new List<string>();
+        var handler = new PingCommandHandler();
+        var mediator = CreateMediator(s =>
+        {
+            s.AddSingleton<IRequestHandler<PingCommand>>(handler);
+            s.AddSingleton<IRequestPostProcessor<PingCommand, Unit>>(new RecordingVoidPostProcessor("Post", log));
+            s.AddScoped(typeof(IPipelineBehavior<,>), typeof(RequestPostProcessorBehavior<,>));
+        });
+
+        await mediator.Send(new PingCommand("hi"));
+
+        Assert.True(handler.WasCalled);
+        Assert.Equal(["Post"], log);
     }
 
     [Fact]

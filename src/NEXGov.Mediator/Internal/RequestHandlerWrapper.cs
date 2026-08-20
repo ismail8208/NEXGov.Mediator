@@ -86,10 +86,12 @@ internal sealed class RequestHandlerWrapperImpl<TRequest, TResponse> : RequestHa
 /// <summary>
 /// Closed-generic dispatch implementation for a concrete request type
 /// <typeparamref name="TRequest"/> that does not produce a response
-/// value. Pipeline behaviors still apply, resolved against an internal
-/// sentinel response type (see <see cref="VoidResponse"/>) so void
-/// requests share the same pipeline machinery as response-producing ones
-/// without a public "Unit"-style type.
+/// value. Pipeline behaviors still apply, resolved against the public
+/// <see cref="Unit"/> type (MED-014) so void requests share the same
+/// pipeline machinery as response-producing ones, and a consumer can
+/// author a closed <see cref="IPipelineBehavior{TRequest, TResponse}"/>/
+/// post-processor/exception handler targeting a specific void request by
+/// name (e.g. <c>IPipelineBehavior&lt;DeleteUser, Unit&gt;</c>).
 /// </summary>
 internal sealed class RequestHandlerWrapperImpl<TRequest> : RequestHandlerWrapperBase
     where TRequest : notnull, IRequest
@@ -104,16 +106,16 @@ internal sealed class RequestHandlerWrapperImpl<TRequest> : RequestHandlerWrappe
 
         var typedRequest = (TRequest)request;
 
-        RequestHandlerDelegate<VoidResponse> pipeline = async ct =>
+        RequestHandlerDelegate<Unit> pipeline = async ct =>
         {
             await handler.Handle(typedRequest, ct).ConfigureAwait(false);
-            return VoidResponse.Value;
+            return Unit.Value;
         };
 
-        if (serviceProvider.GetService(typeof(IEnumerable<IPipelineBehavior<TRequest, VoidResponse>>))
-            is IEnumerable<IPipelineBehavior<TRequest, VoidResponse>> behaviors)
+        if (serviceProvider.GetService(typeof(IEnumerable<IPipelineBehavior<TRequest, Unit>>))
+            is IEnumerable<IPipelineBehavior<TRequest, Unit>> behaviors)
         {
-            var behaviorArray = behaviors as IPipelineBehavior<TRequest, VoidResponse>[] ?? behaviors.ToArray();
+            var behaviorArray = behaviors as IPipelineBehavior<TRequest, Unit>[] ?? behaviors.ToArray();
 
             for (var i = behaviorArray.Length - 1; i >= 0; i--)
             {
@@ -123,6 +125,8 @@ internal sealed class RequestHandlerWrapperImpl<TRequest> : RequestHandlerWrappe
             }
         }
 
+        // Send<TRequest>/Send(object) remain Task-returning: the pipeline's Unit
+        // result is discarded here and never leaks past this wrapper.
         await pipeline(cancellationToken).ConfigureAwait(false);
         return null;
     }

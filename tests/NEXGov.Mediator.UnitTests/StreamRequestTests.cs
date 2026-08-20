@@ -12,13 +12,15 @@ public class StreamRequestTests
         var request = new NumberStreamRequest();
 
         Assert.IsAssignableFrom<IStreamRequest<int>>(request);
-        Assert.IsAssignableFrom<IBaseRequest>(request);
     }
 
+    // MED-017: re-verified against current MediatR source. Unlike IRequest
+    // and IRequest<TResponse>, IStreamRequest<TResponse> does NOT extend
+    // IBaseRequest — this was a MED-004 defect that MED-017 corrects.
     [Fact]
-    public void IStreamRequestOfTResponse_InheritsIBaseRequest()
+    public void IStreamRequestOfTResponse_DoesNotInheritIBaseRequest()
     {
-        Assert.True(typeof(IBaseRequest).IsAssignableFrom(typeof(IStreamRequest<int>)));
+        Assert.False(typeof(IBaseRequest).IsAssignableFrom(typeof(IStreamRequest<int>)));
     }
 
     [Fact]

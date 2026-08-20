@@ -12,9 +12,10 @@ dispatch, notifications/`Publish`, pipeline behaviors, pre/post
 processors, exception handlers/actions, and dependency-injection
 registration (`AddMediatR` with assembly scanning, plus explicit
 `AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
-registration) are implemented and tested. Streaming requests are not
-implemented yet. Nothing in this repository has had a stable release;
-treat it as pre-release.
+registration) are implemented and tested. Streaming request/handler/behavior
+contracts are implemented; streaming runtime execution is not implemented
+yet. Nothing in this repository has had a stable release; treat it as
+pre-release.
 
 ## Quick start
 
@@ -87,8 +88,12 @@ behavior targeting one specific request/response pair instead.
 `AddRequestPreProcessor`/`AddRequestPostProcessor` (and their
 `AddOpen*` variants) register pre/post processors the same way.
 
-**Not yet supported:** streaming
-(`IStreamRequest<TResponse>`/`CreateStream`). See
+**Streaming:** the request/handler/behavior contracts
+(`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,
+`IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`) are implemented
+and compatibility-tested. **Runtime execution is not yet implemented** —
+`ISender.CreateStream(...)` still throws `NotSupportedException`, and
+`AddMediatR` does not scan for stream handlers. See
 [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture,
 including which parts of `AddMediatR` scanning currently register a
 service versus actually wire it into request execution.
@@ -139,9 +144,12 @@ with the surrounding code otherwise unchanged.
 
 This is a compatibility **goal**, not a completed guarantee. See
 [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the current
-compatibility matrix, and [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
-for the architectural principles guiding the implementation. An API family
-is only considered compatible once it has passing tests demonstrating it.
+compatibility matrix, [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)
+for the point-in-time gap analysis against current MediatR (what's
+missing, what's intentionally excluded, and the recommended V1 scope),
+and [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the
+architectural principles guiding the implementation. An API family is
+only considered compatible once it has passing tests demonstrating it.
 
 **NEXGov.Mediator is not MediatR.** It is a clean-room implementation:
 no source code from MediatR or any other mediator library has been
@@ -173,7 +181,14 @@ is used as a compatibility reference.
       `AddOpenBehavior`, `AddRequestPreProcessor`,
       `AddOpenRequestPreProcessor`, `AddRequestPostProcessor`,
       `AddOpenRequestPostProcessor`)
-- [ ] Streaming requests
+- [x] Generic request-handler registration (`RegisterGenericHandlers`,
+      request handlers only — see `docs/COMPATIBILITY-AUDIT.md` for the
+      scope narrowing versus current MediatR)
+- [x] Void-request `Unit` typing and current handler-proximity exception
+      ordering
+- [ ] Streaming requests (contracts implemented — `IStreamRequest<TResponse>`,
+      `IStreamRequestHandler<,>`, `IStreamPipelineBehavior<,>`,
+      `StreamHandlerDelegate<>`; runtime dispatch/DI registration pending)
 - [ ] Compatibility test suite covering the V1 Required and V1 Extended
       surface
 

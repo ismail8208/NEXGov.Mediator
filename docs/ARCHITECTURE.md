@@ -490,6 +490,48 @@ scanning, gated on `MediatRServiceConfiguration.RegisterGenericHandlers`.
   exactly as before MED-013 — a generated closed registration is
   indistinguishable, at dispatch time, from one written by hand.
 
+## Streaming contract principles
+
+MED-017 introduced the streaming pipeline **contracts** only — no runtime.
+The principles below describe the contract layer as it exists today; the
+runtime milestone (MED-018+) will add its own architectural notes when it
+lands.
+
+- **Streaming requests use `IAsyncEnumerable<T>`, not `Task<T>`.**
+  `IStreamRequestHandler<TRequest, TResponse>.Handle(...)` and
+  `IStreamPipelineBehavior<TRequest, TResponse>.Handle(...)` both return
+  `IAsyncEnumerable<TResponse>` — a stream of elements produced over time,
+  not a single eventually-available value.
+- **`IStreamRequest<TResponse>` is deliberately not `IBaseRequest`-rooted.**
+  Unlike `IRequest`/`IRequest<TResponse>`, `IStreamRequest<TResponse>` has
+  no base interface (verified and corrected in MED-017 — the original
+  MED-004 implementation incorrectly assumed the same `IBaseRequest`
+  inheritance the non-stream request contracts use). A type implementing
+  `IStreamRequest<TResponse>` is not implicitly an `IBaseRequest`.
+- **`StreamHandlerDelegate<TResponse>` is a distinct continuation shape
+  from `RequestHandlerDelegate<TResponse>`.** It takes **no**
+  `CancellationToken` parameter — a genuine, verified asymmetry, not an
+  oversight carried over from the non-stream pipeline. A stream behavior
+  that wants to forward cancellation into the next delegate's stream does
+  so by applying its own `cancellationToken` parameter to the
+  `IAsyncEnumerable<T>` that `next()` returns (e.g. via
+  `.WithCancellation(...)`), not by passing a token into `next()` itself.
+- **Stream pipeline composition mirrors the non-stream pipeline's shape,
+  not its variance.** `IStreamPipelineBehavior<TRequest, TResponse>`
+  wraps `next` the same way `IPipelineBehavior<TRequest, TResponse>`
+  does, but its `TResponse` carries no variance modifier — matching
+  `IPipelineBehavior<,>`'s own unmodified `TResponse`, not
+  `IStreamRequestHandler<,>`'s covariant `TResponse`. Do not assume
+  variance is uniform across a contract family; each shape is verified
+  independently.
+- **Runtime execution, cancellation forwarding, and enumeration semantics
+  remain deferred.** `Mediator.CreateStream` still throws
+  `NotSupportedException` for both overloads; nothing resolves an
+  `IStreamRequestHandler<,>`, constructs a stream pipeline, or scans for
+  stream handlers during `AddMediatR`. Those are runtime-milestone
+  concerns (MED-018 dispatch, MED-019 DI registration), not contract
+  concerns, and are intentionally out of scope here.
+
 ## Non-goals
 
 - Reproducing MediatR's internal class structure or implementation

@@ -35,10 +35,15 @@ public class StreamRequestCompatibilityTests
         Assert.Equal(GenericParameterAttributes.Covariant, variance);
     }
 
+    // MED-017: re-verified against current MediatR source. Unlike IRequest
+    // and IRequest<TResponse>, IStreamRequest<TResponse> does NOT extend
+    // IBaseRequest — this was a MED-004 defect (this project originally
+    // assumed the same IBaseRequest inheritance pattern as the non-stream
+    // request contracts) that MED-017 corrects.
     [Fact]
-    public void IStreamRequestOfTResponse_InheritsIBaseRequest()
+    public void IStreamRequestOfTResponse_DoesNotInheritIBaseRequest()
     {
-        Assert.Contains(typeof(IBaseRequest), typeof(IStreamRequest<>).GetInterfaces());
+        Assert.DoesNotContain(typeof(IBaseRequest), typeof(IStreamRequest<>).GetInterfaces());
     }
 
     [Fact]

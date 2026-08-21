@@ -43,6 +43,7 @@ public class PublicApiSurfaceCompatibilityTests
             "MediatRServiceCollectionExtensions",
             "MediatRServiceConfiguration",
             "NotificationHandlerExecutor",
+            "OpenBehavior",
             "RequestExceptionActionProcessorBehavior`2",
             "RequestExceptionActionProcessorStrategy",
             "RequestExceptionHandlerState`1",

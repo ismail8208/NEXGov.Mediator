@@ -1,5 +1,6 @@
 using System.Reflection;
 using NEXGov.Mediator;
+using NEXGov.Mediator.Entities;
 using NEXGov.Mediator.Internal;
 using NEXGov.Mediator.NotificationPublishers;
 using NEXGov.Mediator.Pipeline;
@@ -126,7 +127,9 @@ public class MediatRServiceConfiguration
 
     /// <summary>
     /// Gets the pipeline behavior registrations to add, in order. Populated by <see cref="AddBehavior(Type, ServiceLifetime)"/>,
-    /// <see cref="AddBehavior(Type, Type, ServiceLifetime)"/>, and <see cref="AddOpenBehavior"/>.
+    /// <see cref="AddBehavior(Type, Type, ServiceLifetime)"/>, <see cref="AddOpenBehavior"/>, and the
+    /// <see cref="AddOpenBehaviors(IEnumerable{Type}, ServiceLifetime)"/>/<see cref="AddOpenBehaviors(IEnumerable{OpenBehavior})"/>
+    /// batch overloads.
     /// </summary>
     public List<ServiceDescriptor> BehaviorsToRegister { get; } = [];
 
@@ -283,6 +286,60 @@ public class MediatRServiceConfiguration
         foreach (var openInterface in implementedOpenInterfaces)
         {
             BehaviorsToRegister.Add(new ServiceDescriptor(openInterface, openBehaviorType, serviceLifetime));
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Registers multiple open-generic pipeline behaviors, equivalent to calling
+    /// <see cref="AddOpenBehavior"/> once per type in <paramref name="openBehaviorTypes"/>, in order, all
+    /// under the same <paramref name="serviceLifetime"/>.
+    /// </summary>
+    /// <param name="openBehaviorTypes">The open-generic behavior types to register.</param>
+    /// <param name="serviceLifetime">The service lifetime to register each one under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
+    /// <returns>This configuration instance, for chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="openBehaviorTypes"/> is <see langword="null"/>, or one of its elements is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">An element of <paramref name="openBehaviorTypes"/> is not generic, or does not implement <see cref="IPipelineBehavior{TRequest, TResponse}"/>.</exception>
+    /// <remarks>
+    /// Not atomic: types processed before an invalid or null entry are added to
+    /// <see cref="BehaviorsToRegister"/> before the exception propagates.
+    /// </remarks>
+    public MediatRServiceConfiguration AddOpenBehaviors(IEnumerable<Type> openBehaviorTypes, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    {
+        ArgumentNullException.ThrowIfNull(openBehaviorTypes);
+
+        foreach (var openBehaviorType in openBehaviorTypes)
+        {
+            AddOpenBehavior(openBehaviorType, serviceLifetime);
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Registers multiple open-generic pipeline behaviors, equivalent to calling
+    /// <see cref="AddOpenBehavior"/> once per <see cref="OpenBehavior.OpenBehaviorType"/>, each under its
+    /// own <see cref="OpenBehavior.ServiceLifetime"/>, in order.
+    /// </summary>
+    /// <param name="openBehaviors">The open-generic behavior registrations to add.</param>
+    /// <returns>This configuration instance, for chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="openBehaviors"/> is <see langword="null"/>.</exception>
+    /// <exception cref="NullReferenceException">An element of <paramref name="openBehaviors"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">An element's <see cref="OpenBehavior.OpenBehaviorType"/> is not generic.</exception>
+    /// <remarks>
+    /// Not atomic, matching the <see cref="AddOpenBehaviors(IEnumerable{Type}, ServiceLifetime)"/> overload.
+    /// Verified against current MediatR source: this overload does not guard against a null element in
+    /// <paramref name="openBehaviors"/> — it is dereferenced directly, so a null entry throws
+    /// <see cref="NullReferenceException"/> rather than <see cref="ArgumentNullException"/>.
+    /// </remarks>
+    public MediatRServiceConfiguration AddOpenBehaviors(IEnumerable<OpenBehavior> openBehaviors)
+    {
+        ArgumentNullException.ThrowIfNull(openBehaviors);
+
+        foreach (var openBehavior in openBehaviors)
+        {
+            AddOpenBehavior(openBehavior.OpenBehaviorType, openBehavior.ServiceLifetime);
         }
 
         return this;

@@ -64,6 +64,26 @@ public sealed class PerformanceBehavior<TRequest, TResponse> : IPipelineBehavior
     }
 }
 
+// Fourth open behavior, used only by MED-021's AddOpenBehaviors acceptance test.
+public sealed class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
+{
+    private readonly List<string> _log;
+
+    public CachingBehavior(List<string> log)
+    {
+        _log = log;
+    }
+
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        _log.Add("Caching.Before");
+        var response = await next(cancellationToken).ConfigureAwait(false);
+        _log.Add("Caching.After");
+        return response;
+    }
+}
+
 // Depends on the same IDiScopedDependency as DiScopedPingHandler (see
 // DiScanningFixtures.cs), so a test can prove a behavior registered
 // through AddOpenBehavior shares one scoped dependency instance with the

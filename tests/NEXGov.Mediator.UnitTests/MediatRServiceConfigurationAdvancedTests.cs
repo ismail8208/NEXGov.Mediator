@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NEXGov.Mediator.Entities;
 using NEXGov.Mediator.Pipeline;
 
 namespace NEXGov.Mediator.UnitTests;
@@ -186,6 +187,197 @@ public class MediatRServiceConfigurationAdvancedTests
         yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenRequestPreProcessor(null!))];
         yield return [new Action<MediatRServiceConfiguration>(c => c.AddRequestPostProcessor((Type)null!))];
         yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenRequestPostProcessor(null!))];
+        yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenBehaviors((IEnumerable<Type>)null!))];
+        yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenBehaviors((IEnumerable<OpenBehavior>)null!))];
+    }
+
+    // --- AddOpenBehaviors(IEnumerable<Type>, ServiceLifetime) ---
+
+    [Fact]
+    public void AddOpenBehaviors_TypeCollection_RegistersEachInOrder_UnderTheSameLifetime()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        configuration.AddOpenBehaviors(
+            [typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>), typeof(PerformanceBehavior<,>)],
+            ServiceLifetime.Scoped);
+
+        Assert.Equal(
+            [typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>), typeof(PerformanceBehavior<,>)],
+            configuration.BehaviorsToRegister.Select(d => d.ImplementationType));
+        Assert.All(configuration.BehaviorsToRegister, d => Assert.Equal(ServiceLifetime.Scoped, d.Lifetime));
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_TypeCollection_IsEquivalentToCallingAddOpenBehaviorPerType()
+    {
+        var viaBatch = new MediatRServiceConfiguration();
+        viaBatch.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>)]);
+
+        var viaIndividual = new MediatRServiceConfiguration();
+        viaIndividual.AddOpenBehavior(typeof(LoggingBehavior<,>));
+        viaIndividual.AddOpenBehavior(typeof(ValidationBehavior<,>));
+
+        Assert.Equal(
+            viaIndividual.BehaviorsToRegister.Select(d => (d.ServiceType, d.ImplementationType, d.Lifetime)),
+            viaBatch.BehaviorsToRegister.Select(d => (d.ServiceType, d.ImplementationType, d.Lifetime)));
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_TypeCollection_EmptyCollection_RegistersNothing()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        configuration.AddOpenBehaviors([]);
+
+        Assert.Empty(configuration.BehaviorsToRegister);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_TypeCollection_ThrowsInvalidOperationException_WhenAnElementIsNotGeneric()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(PingOnlyBehavior)]));
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_TypeCollection_ThrowsArgumentNullException_WhenAnElementIsNull()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        Assert.Throws<ArgumentNullException>(() =>
+            configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>), null!]));
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_TypeCollection_NotAtomic_EarlierValidEntriesRemainRegisteredAfterFailure()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(PingOnlyBehavior), typeof(ValidationBehavior<,>)]));
+
+        // LoggingBehavior was processed before PingOnlyBehavior failed; ValidationBehavior,
+        // after the failing entry, was never reached.
+        var descriptor = Assert.Single(configuration.BehaviorsToRegister);
+        Assert.Equal(typeof(LoggingBehavior<,>), descriptor.ImplementationType);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_TypeCollection_ReturnsSameConfigurationInstance_ForChaining()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        var result = configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
+
+        Assert.Same(configuration, result);
+    }
+
+    // --- AddOpenBehaviors(IEnumerable<OpenBehavior>) ---
+
+    [Fact]
+    public void AddOpenBehaviors_OpenBehaviorCollection_RegistersEachInOrder_UnderItsOwnLifetime()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        configuration.AddOpenBehaviors(
+        [
+            new OpenBehavior(typeof(LoggingBehavior<,>), ServiceLifetime.Singleton),
+            new OpenBehavior(typeof(ValidationBehavior<,>), ServiceLifetime.Scoped),
+            new OpenBehavior(typeof(PerformanceBehavior<,>)),
+        ]);
+
+        Assert.Equal(3, configuration.BehaviorsToRegister.Count);
+        Assert.Equal(typeof(LoggingBehavior<,>), configuration.BehaviorsToRegister[0].ImplementationType);
+        Assert.Equal(ServiceLifetime.Singleton, configuration.BehaviorsToRegister[0].Lifetime);
+        Assert.Equal(typeof(ValidationBehavior<,>), configuration.BehaviorsToRegister[1].ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, configuration.BehaviorsToRegister[1].Lifetime);
+        Assert.Equal(typeof(PerformanceBehavior<,>), configuration.BehaviorsToRegister[2].ImplementationType);
+        Assert.Equal(ServiceLifetime.Transient, configuration.BehaviorsToRegister[2].Lifetime);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_OpenBehaviorCollection_EmptyCollection_RegistersNothing()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        configuration.AddOpenBehaviors(Array.Empty<OpenBehavior>());
+
+        Assert.Empty(configuration.BehaviorsToRegister);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_OpenBehaviorCollection_ThrowsNullReferenceException_WhenAnElementIsNull()
+    {
+        // Verified quirk (see OpenBehaviorTests and MediatRServiceConfiguration.AddOpenBehaviors
+        // XML docs): a null OpenBehavior element is dereferenced directly, with no defensive
+        // null check, matching current MediatR source exactly.
+        var configuration = new MediatRServiceConfiguration();
+
+        Assert.Throws<NullReferenceException>(() =>
+            configuration.AddOpenBehaviors([new OpenBehavior(typeof(LoggingBehavior<,>)), null!]));
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_OpenBehaviorCollection_NonGenericOpenBehavior_ConstructsButFailsWhenBatched()
+    {
+        // OpenBehavior's own constructor accepted PingOnlyBehavior (see
+        // OpenBehaviorTests.Constructor_AcceptsNonGenericTypeImplementingAClosedIPipelineBehavior);
+        // AddOpenBehaviors is where the "must be generic" check finally applies, via the
+        // delegated AddOpenBehavior call.
+        var nonGenericOpenBehavior = new OpenBehavior(typeof(PingOnlyBehavior));
+        var configuration = new MediatRServiceConfiguration();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            configuration.AddOpenBehaviors([nonGenericOpenBehavior]));
+
+        Assert.Contains("generic", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_OpenBehaviorCollection_ReturnsSameConfigurationInstance_ForChaining()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        var result = configuration.AddOpenBehaviors([new OpenBehavior(typeof(LoggingBehavior<,>))]);
+
+        Assert.Same(configuration, result);
+    }
+
+    // --- Duplicate semantics: preserved in BehaviorsToRegister (DI-level collapse is proven in AdvancedPipelineRegistrationTests) ---
+
+    [Fact]
+    public void AddOpenBehaviors_SameBehaviorTwiceInOneBatchCall_BothPreservedInBehaviorsToRegister()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(LoggingBehavior<,>)]);
+
+        Assert.Equal(2, configuration.BehaviorsToRegister.Count);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_SameBehaviorOnceIndividuallyAndOnceInBatch_BothPreservedInBehaviorsToRegister()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        configuration.AddOpenBehavior(typeof(LoggingBehavior<,>));
+        configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
+
+        Assert.Equal(2, configuration.BehaviorsToRegister.Count);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_SameBehaviorInTwoSeparateBatchCalls_BothPreservedInBehaviorsToRegister()
+    {
+        var configuration = new MediatRServiceConfiguration();
+
+        configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
+        configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
+
+        Assert.Equal(2, configuration.BehaviorsToRegister.Count);
     }
 
     // --- AddRequestPreProcessor / AddOpenRequestPreProcessor ---

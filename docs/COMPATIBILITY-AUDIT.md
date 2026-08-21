@@ -68,12 +68,14 @@ and `TaskWhenAllPublisher` (concurrent strategy), the second
 `NotificationPublisher`/`NotificationPublisherType` configuration
 properties are all implemented and verified (MED-020).
 
-One real, current-MediatR public API surface still has **no
-NEXGov.Mediator equivalent at all**: the small
-`AddOpenBehaviors`(plural)/`OpenBehavior` batch-registration convenience
-surface. Commercial licensing (`LicenseKey` on both
-`MediatRServiceConfiguration` and `Mediator`) is intentionally excluded,
-matching this project's established, repeatedly-stated policy.
+The `AddOpenBehaviors`(plural)/`OpenBehavior` batch-registration
+convenience — the last real functional gap identified by this audit — is
+now also implemented and verified (MED-021). The only remaining gap
+against current MediatR's functional surface is generic-family expansion
+beyond request handlers (see Partial Compatibility below). Commercial
+licensing (`LicenseKey` on both `MediatRServiceConfiguration` and
+`Mediator`) is intentionally excluded, matching this project's
+established, repeatedly-stated policy.
 
 For the specific, real, currently-fetched MediatR usage pattern of the
 Jason Taylor CleanArchitecture reference template, every API call used is
@@ -126,7 +128,8 @@ re-confirmed here:
 | `StreamHandlerDelegate<out TResponse>` | `delegate IAsyncEnumerable<TResponse> StreamHandlerDelegate<TResponse>()` — covariant, **no** `CancellationToken` parameter (verified — asymmetric with `RequestHandlerDelegate<TResponse>`, which takes one). Implemented in MED-017; MED-018's runtime bridges the single `CreateStream` token onto each composition boundary internally so it still reaches handlers/behaviors despite the delegate itself carrying none. |
 | `CreateStream(...)` runtime | Resolves the closed `IStreamRequestHandler<,>`/`IStreamPipelineBehavior<,>` for the request's **concrete runtime type** via `IServiceProvider`; fully lazy (argument validation is eager/synchronous, everything else — behavior resolution, handler resolution, execution — is deferred to first enumeration); never buffers; missing-handler `InvalidOperationException` surfaces on first enumeration, not at the `CreateStream` call; multiple registered handlers resolve to the last-registered one (plain `IServiceProvider.GetService<T>()` semantics). Implemented in MED-018, verified against current MediatR's `Mediator.CreateStream`/`StreamRequestHandlerWrapperImpl` runtime source. As of MED-019, works end to end for `AddMediatR`-discovered closed handlers with zero manual registration. |
 | `AddStreamBehavior(...)` / `AddOpenStreamBehavior(...)` / `StreamBehaviorsToRegister` | Structurally identical to `AddBehavior`/`AddOpenBehavior`/`BehaviorsToRegister`, targeting `IStreamPipelineBehavior<,>` — 4 + 1 overloads, verified against current source (`src/MediatR/MicrosoftExtensionsDI/MediatrServiceConfiguration.cs`). Preserves first-registered-outermost ordering through `StreamBehaviorsToRegister`'s list order, consumed by `AddMediatR` via a plain `TryAddEnumerable` loop with no special-casing (current MediatR applies no nested-generic-response closing pass to stream behaviors, unlike `BehaviorsToRegister`). Implemented in MED-019. |
-| `MediatRServiceConfiguration` (subset) | `TypeEvaluator`, `MediatorImplementationType`, `Lifetime`, `RequestExceptionActionProcessorStrategy`, `AutoRegisterRequestProcessors`, `RegisterGenericHandlers` + 4 limit properties, `RegisterServicesFromAssembly*` (3 overloads), `AddBehavior` (4 overloads), `AddOpenBehavior` (1), `AddStreamBehavior` (4 overloads, MED-019), `AddOpenStreamBehavior` (1, MED-019), `AddRequestPreProcessor` (4), `AddOpenRequestPreProcessor` (1), `AddRequestPostProcessor` (4), `AddOpenRequestPostProcessor` (1), `NotificationPublisher`/`NotificationPublisherType` (MED-020) — see Configuration API Completeness for what's missing from this list. |
+| `MediatRServiceConfiguration` (subset) | `TypeEvaluator`, `MediatorImplementationType`, `Lifetime`, `RequestExceptionActionProcessorStrategy`, `AutoRegisterRequestProcessors`, `RegisterGenericHandlers` + 4 limit properties, `RegisterServicesFromAssembly*` (3 overloads), `AddBehavior` (4 overloads), `AddOpenBehavior` (1), `AddOpenBehaviors` (2 overloads, MED-021), `AddStreamBehavior` (4 overloads, MED-019), `AddOpenStreamBehavior` (1, MED-019), `AddRequestPreProcessor` (4), `AddOpenRequestPreProcessor` (1), `AddRequestPostProcessor` (4), `AddOpenRequestPostProcessor` (1), `NotificationPublisher`/`NotificationPublisherType` (MED-020) — see Configuration API Completeness for what's missing from this list. |
+| `OpenBehavior` | Public, non-sealed class, namespace `NEXGov.Mediator.Entities`; pairs a `Type` with a `ServiceLifetime` for use with `AddOpenBehaviors(IEnumerable<OpenBehavior>)`. Constructor validates the type implements some closed or open `IPipelineBehavior<,>` — verified quirk: it does not itself check `Type.IsGenericType`, unlike `AddOpenBehavior`. Implemented in MED-021. |
 | `MediatRServiceCollectionExtensions.AddMediatR` | Both overloads (`Action<MediatRServiceConfiguration>`, `MediatRServiceConfiguration`); return the same `IServiceCollection`; null-guard and no-assembly-configured guard behavior verified. |
 | `RequestExceptionActionProcessorStrategy` | Enum, two members, default `ApplyForUnhandledExceptions`. |
 | `INotificationPublisher` | `Task Publish(IEnumerable<NotificationHandlerExecutor>, INotification, CancellationToken)`, namespace `NEXGov.Mediator`. `Mediator.Publish` resolves handlers, builds executors, and delegates entirely to this — `Mediator` retains no execution-strategy logic of its own. Implemented in MED-020. |
@@ -138,7 +141,7 @@ re-confirmed here:
 
 | API | What differs |
 |---|---|
-| `MediatRServiceConfiguration` | See Configuration API Completeness — missing `AddOpenBehaviors`\*(plural)/`OpenBehavior`, `LicenseKey`. `StreamBehaviorsToRegister`/`AddStreamBehavior`\*/`AddOpenStreamBehavior` (MED-019) and `NotificationPublisher`/`NotificationPublisherType` (MED-020) both implemented — see Fully Compatible Core. Everything else present matches exactly. |
+| `MediatRServiceConfiguration` | See Configuration API Completeness — only `LicenseKey` remains (intentionally excluded, see below). `StreamBehaviorsToRegister`/`AddStreamBehavior`\*/`AddOpenStreamBehavior` (MED-019), `NotificationPublisher`/`NotificationPublisherType` (MED-020), and `AddOpenBehaviors`\*(plural)/`OpenBehavior` (MED-021) all implemented — see Fully Compatible Core. Everything else present matches exactly. |
 | `RegisterGenericHandlers` scope | Verified current MediatR applies this to every scanned family (request handlers, notification handlers, exception handlers/actions, pre/post processors, **and stream handlers** — re-confirmed in MED-019 — see Generic Handler Scope Audit). NEXGov.Mediator (MED-013, extended MED-019) applies it to `IRequestHandler<,>`/`IRequestHandler<>` only — a deliberate, documented narrowing, not a defect. Generic-family expansion for every other scanned family (notifications, exceptions, processors, and now stream handlers) remains a single, consolidated compatibility gap for a later, dedicated task — not expanded piecemeal per family. |
 
 ## Not Implemented
@@ -147,10 +150,9 @@ re-confirmed here:
 
 **No notification publisher items remain in this section either.** As of MED-020, `INotificationPublisher`, `NotificationHandlerExecutor`, `ForeachAwaitPublisher`/`TaskWhenAllPublisher`, the second `Mediator` constructor, and `NotificationPublisher`/`NotificationPublisherType` are all implemented — see Fully Compatible Core.
 
-| API / Feature | Current MediatR shape | Practical importance |
-|---|---|---|
-| `MediatRServiceConfiguration.AddOpenBehaviors(IEnumerable<Type>, ServiceLifetime)` / `AddOpenBehaviors(IEnumerable<OpenBehavior>)` | Batch-registers multiple open behaviors in one call; the `OpenBehavior` overload allows a per-behavior `ServiceLifetime`. Both are thin convenience wrappers around the already-implemented `AddOpenBehavior`. | Low — functionally equivalent to calling `AddOpenBehavior` in a loop, which already works. |
-| `OpenBehavior` (public type, exact declaring file not confirmed) | Referenced by `AddOpenBehaviors(IEnumerable<OpenBehavior>)`; pairs a `Type` with a `ServiceLifetime`. | Same as above. |
+**No `AddOpenBehaviors`/`OpenBehavior` item remains in this section either.** As of MED-021, both overloads of `MediatRServiceConfiguration.AddOpenBehaviors` and the `OpenBehavior` type are implemented — see Fully Compatible Core.
+
+This section is now empty: after MED-021, the only functional gap against current MediatR is `RegisterGenericHandlers` scope (see Partial Compatibility above), and the only other differences are the intentionally excluded items below.
 
 ## Intentionally Excluded
 
@@ -208,7 +210,8 @@ Based on this audit, V1 should promise:
 > Source-compatible with the MediatR API subset required by standard
 > request/response dispatch, notifications published sequentially or
 > concurrently (with support for a fully custom `INotificationPublisher`
-> strategy), pipeline behaviors, pre/post processors, exception
+> strategy), pipeline behaviors (including the `AddOpenBehaviors`
+> batch-registration convenience), pre/post processors, exception
 > handlers/actions (with current handler-proximity ordering), streaming
 > request/response dispatch (closed stream handlers and behaviors,
 > manually registered or discovered via assembly scanning),
@@ -216,13 +219,11 @@ Based on this audit, V1 should promise:
 > generic request-handler expansion), and void-request `Unit` typing.
 
 V1 should **not** promise: generic-family expansion for
-notifications/exceptions/processors/stream handlers, the
-`AddOpenBehaviors`(plural)/`OpenBehavior` batch-registration convenience,
-or any commercial-license-adjacent API. This is not "100% of MediatR's
-public surface" — it is the subset this project has consistently,
-deliberately targeted and fully verified, sized to the
-CleanArchitecture-style usage pattern that motivated the project (see
-migration status above).
+notifications/exceptions/processors/stream handlers, or any
+commercial-license-adjacent API. This is not "100% of MediatR's public
+surface" — it is the subset this project has consistently, deliberately
+targeted and fully verified, sized to the CleanArchitecture-style usage
+pattern that motivated the project (see migration status above).
 
 ## Gap Ranking
 
@@ -233,8 +234,7 @@ migration status above).
   notification publisher abstraction, formerly the sole P1 item, is
   fully implemented and verified as of MED-020.
 - **P2 (edge/advanced compatibility):**
-  - Generic-family expansion beyond request handlers (notifications/exceptions/processors, **and now stream handlers as of MED-019's re-confirmation**) — real current behavior, narrow practical impact.
-  - `AddOpenBehaviors`(plural)/`OpenBehavior` batch registration — thin convenience wrapper with a working one-at-a-time equivalent already in place.
+  - Generic-family expansion beyond request handlers (notifications/exceptions/processors, **and now stream handlers as of MED-019's re-confirmation**) — real current behavior, narrow practical impact. The only P2 functional gap remaining after MED-021.
   - Unstable `Array.Sort` tie-break in current MediatR's own `HandlersOrderer` vs. this project's deliberate stable-provider-order tie-break (MED-015) — see Exception Ordering Audit below; classified P2 rather than a defect, since the target itself specifies no stable semantic.
 - **P3 (intentionally excluded/non-goal):**
   - `LicenseKey` (both locations) — commercial licensing subsystem.
@@ -253,7 +253,6 @@ fully closed.
 ## Post-V1 / Optional Features
 
 - Generic-family expansion beyond request handlers (`RegisterGenericHandlers` for notifications/exceptions/processors, and stream handlers).
-- `AddOpenBehaviors`(plural)/`OpenBehavior` convenience batch registration.
 - Commercial licensing (permanently out of scope, not deferred).
 
 ## Recommended Next Tasks
@@ -265,7 +264,7 @@ full rationale; task list:
 - ~~**MED-018** — Streaming Runtime (`CreateStream` dispatch, cancellation, async-enumeration semantics)~~ — done.
 - ~~**MED-019** — Streaming DI Registration (scanning, `AddStreamBehavior`/`AddOpenStreamBehavior`)~~ — done.
 - ~~**MED-020** — Notification Publisher Compatibility (`INotificationPublisher`, `ForeachAwaitPublisher`/`TaskWhenAllPublisher`, `NotificationHandlerExecutor`, `MediatRServiceConfiguration.NotificationPublisher`/`NotificationPublisherType`, second `Mediator` constructor)~~ — done.
-- **MED-021** — `AddOpenBehaviors`/`OpenBehavior` Batch Registration Compatibility
-- **MED-022** — Generic Family Expansion (notification/exception/processor/**stream handler** `RegisterGenericHandlers` support)
+- ~~**MED-021** — `AddOpenBehaviors`/`OpenBehavior` Batch Registration Compatibility~~ — done.
+- **MED-022** — Generic Family Expansion (notification/exception/processor/**stream handler** `RegisterGenericHandlers` support) — the sole remaining functional (P2) compatibility gap.
 - **MED-023** — Release Readiness (package version/authors/repository metadata, symbol packages)
 - **MED-024** — Final Compatibility Audit

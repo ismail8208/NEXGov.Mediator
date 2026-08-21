@@ -129,4 +129,90 @@ public class AdvancedRegistrationIntegrationTests
             log);
         Assert.Equal("hello", response.Message);
     }
+
+    // --- MED-021: AddOpenBehaviors batch registration acceptance ---
+
+    [Fact]
+    public async Task AddOpenBehaviors_NoManualPipelineRegistration_ProducesExactNesting()
+    {
+        var log = new List<string>();
+        var services = new ServiceCollection();
+        services.AddSingleton(log);
+
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
+
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>), typeof(PerformanceBehavior<,>)]);
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<ISender>();
+
+        var response = await sender.Send(new DiPing("hello"));
+
+        Assert.Equal(
+            [
+                "Logging.Before",
+                "Validation.Before",
+                "Performance.Before",
+                "Performance.After",
+                "Validation.After",
+                "Logging.After",
+            ],
+            log);
+        Assert.Equal("hello", response.Message);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_MixedWithIndividualAddOpenBehavior_NoManualPipelineRegistration_FollowsInsertionOrder()
+    {
+        var log = new List<string>();
+        var services = new ServiceCollection();
+        services.AddSingleton(log);
+
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
+
+            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+            cfg.AddOpenBehaviors([typeof(ValidationBehavior<,>), typeof(PerformanceBehavior<,>)]);
+            cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new DiPing("hello"));
+
+        Assert.Equal(
+            [
+                "Logging.Before", "Validation.Before", "Performance.Before", "Caching.Before",
+                "Caching.After", "Performance.After", "Validation.After", "Logging.After",
+            ],
+            log);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_DynamicSend_NoManualPipelineRegistration_ExecutesTheBehaviors()
+    {
+        var log = new List<string>();
+        var services = new ServiceCollection();
+        services.AddSingleton(log);
+
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
+
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>)]);
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<ISender>();
+
+        var response = await sender.Send((object)new DiPing("hello"));
+
+        Assert.Equal(["Logging.Before", "Validation.Before", "Validation.After", "Logging.After"], log);
+        Assert.IsType<DiPong>(response);
+    }
 }

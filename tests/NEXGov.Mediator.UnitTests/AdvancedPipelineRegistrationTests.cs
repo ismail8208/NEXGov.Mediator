@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NEXGov.Mediator.Entities;
 using NEXGov.Mediator.Pipeline;
 
 namespace NEXGov.Mediator.UnitTests;
@@ -355,5 +356,250 @@ public class AdvancedPipelineRegistrationTests
             sd.ImplementationType == typeof(LoggingBehavior<,>));
 
         Assert.Equal(lifetime, descriptor.Lifetime);
+    }
+
+    // --- MED-021: AddOpenBehaviors batch registration ---
+
+    [Fact]
+    public async Task AddOpenBehaviors_ThreeBehaviorsInOneBatchCall_ExecuteInRegistrationOrder_OutermostFirst()
+    {
+        var (provider, log) = BuildProvider(cfg =>
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>), typeof(PerformanceBehavior<,>)]));
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new Ping("hi"));
+
+        Assert.Equal(
+            ["Logging.Before", "Validation.Before", "Performance.Before", "Performance.After", "Validation.After", "Logging.After"],
+            log.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_MatchesEquivalentIndividualAddOpenBehaviorCalls()
+    {
+        var (batchProvider, batchLog) = BuildProvider(cfg =>
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>), typeof(PerformanceBehavior<,>)]));
+        using var _ = batchProvider;
+
+        var (individualProvider, individualLog) = BuildProvider(cfg =>
+        {
+            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+            cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
+        });
+        using var __ = individualProvider;
+
+        await batchProvider.GetRequiredService<ISender>().Send(new Ping("hi"));
+        await individualProvider.GetRequiredService<ISender>().Send(new Ping("hi"));
+
+        Assert.Equal(individualLog.Entries, batchLog.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_MixedWithIndividualAddOpenBehaviorCalls_FollowsExactInsertionOrder()
+    {
+        // A (individual), B+C (batch), D (individual) — final order must be A, B, C, D.
+        var (provider, log) = BuildProvider(cfg =>
+        {
+            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+            cfg.AddOpenBehaviors([typeof(ValidationBehavior<,>), typeof(PerformanceBehavior<,>)]);
+            cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
+        });
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new Ping("hi"));
+
+        Assert.Equal(
+            [
+                "Logging.Before", "Validation.Before", "Performance.Before", "Caching.Before",
+                "Caching.After", "Performance.After", "Validation.After", "Logging.After",
+            ],
+            log.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_OpenBehaviorOverload_ExecutesInRegistrationOrder()
+    {
+        var (provider, log) = BuildProvider(cfg => cfg.AddOpenBehaviors(
+        [
+            new OpenBehavior(typeof(LoggingBehavior<,>)),
+            new OpenBehavior(typeof(ValidationBehavior<,>)),
+        ]));
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new Ping("hi"));
+
+        Assert.Equal(["Logging.Before", "Validation.Before", "Validation.After", "Logging.After"], log.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_SameBehaviorTwiceInOneBatchCall_ExecutesOnlyOnce()
+    {
+        // BehaviorsToRegister preserves both entries (see
+        // MediatRServiceConfigurationAdvancedTests), but ServiceRegistrar wires each
+        // through services.TryAddEnumerable, which collapses a second descriptor sharing
+        // the same (ServiceType, ImplementationType) pair — verified against the .NET
+        // runtime's own TryAddEnumerable implementation.
+        var (provider, log) = BuildProvider(cfg =>
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(LoggingBehavior<,>)]));
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new Ping("hi"));
+
+        Assert.Equal(["Logging.Before", "Logging.After"], log.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_SameBehaviorOnceIndividuallyAndOnceInBatch_ExecutesOnlyOnce()
+    {
+        var (provider, log) = BuildProvider(cfg =>
+        {
+            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
+        });
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new Ping("hi"));
+
+        Assert.Equal(["Logging.Before", "Logging.After"], log.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_SameBehaviorInTwoSeparateBatchCalls_ExecutesOnlyOnce()
+    {
+        var (provider, log) = BuildProvider(cfg =>
+        {
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
+        });
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new Ping("hi"));
+
+        Assert.Equal(["Logging.Before", "Logging.After"], log.Entries);
+    }
+
+    [Theory]
+    [InlineData(ServiceLifetime.Transient)]
+    [InlineData(ServiceLifetime.Scoped)]
+    [InlineData(ServiceLifetime.Singleton)]
+    public void AddOpenBehaviors_TypeCollectionOverload_HonorsConfiguredLifetime(ServiceLifetime lifetime)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(new ScanningLog());
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
+            cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>)], lifetime);
+        });
+
+        var descriptor = services.Single(sd =>
+            sd.ServiceType == typeof(IPipelineBehavior<,>) &&
+            sd.ImplementationType == typeof(LoggingBehavior<,>));
+
+        Assert.Equal(lifetime, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_OpenBehaviorOverload_HonorsPerEntryLifetime()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(new ScanningLog());
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
+            cfg.AddOpenBehaviors(
+            [
+                new OpenBehavior(typeof(LoggingBehavior<,>), ServiceLifetime.Singleton),
+                new OpenBehavior(typeof(ValidationBehavior<,>), ServiceLifetime.Scoped),
+            ]);
+        });
+
+        Assert.Equal(ServiceLifetime.Singleton, services.Single(sd =>
+            sd.ServiceType == typeof(IPipelineBehavior<,>) && sd.ImplementationType == typeof(LoggingBehavior<,>)).Lifetime);
+        Assert.Equal(ServiceLifetime.Scoped, services.Single(sd =>
+            sd.ServiceType == typeof(IPipelineBehavior<,>) && sd.ImplementationType == typeof(ValidationBehavior<,>)).Lifetime);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_TwoDifferentRequests_EachClosesCorrectly()
+    {
+        var (provider, log) = BuildProvider(cfg =>
+            cfg.AddOpenBehaviors([typeof(ValidationBehavior<,>)]));
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new Ping("a"));
+        await sender.Send(new ScannedPing("b"));
+
+        Assert.Equal(
+            ["Validation.Before", "Validation.After", "Validation.Before", "Validation.After"],
+            log.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_VoidRequest_ClosesOverUnit()
+    {
+        var (provider, log) = BuildProvider(cfg => cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>)]));
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        await sender.Send(new ScannedCommand("hi"));
+
+        Assert.Equal(["Logging.Before", "Logging.After"], log.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_DynamicSend_ExecutesTheBehaviors()
+    {
+        var (provider, log) = BuildProvider(cfg => cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>)]));
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        var response = await sender.Send((object)new Ping("hi"));
+
+        Assert.Equal(["Logging.Before", "Logging.After"], log.Entries);
+        Assert.IsType<Pong>(response);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_ScannedExceptionHandlerAndBatchBehavior_ExceptionCompositionUnchanged()
+    {
+        // Mirrors CustomOpenBehavior_ScannedExceptionHandlerAndAction_RemainConsistentWithStrategy
+        // above, but registering the custom behavior via AddOpenBehaviors instead of
+        // AddOpenBehavior — proves the batch API does not change exception-pipeline
+        // registration order (exception behaviors remain outermost).
+        var (provider, log) = BuildProvider(cfg => cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>)]));
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        var response = await sender.Send(new ScannedThrowingPing("hi"));
+
+        Assert.Equal("recovered", response.Message);
+        Assert.Equal(["Logging.Before"], log.Entries);
+    }
+
+    [Fact]
+    public async Task AddOpenBehaviors_ComposesNormallyWithPreAndPostProcessors()
+    {
+        var (provider, log) = BuildProvider(cfg =>
+        {
+            cfg.AddRequestPreProcessor<AuditPreProcessor>();
+            cfg.AddOpenBehaviors([typeof(ValidationBehavior<,>)]);
+            cfg.AddRequestPostProcessor<AuditPostProcessor>();
+        });
+        using var _ = provider;
+        var sender = provider.GetRequiredService<ISender>();
+
+        var response = await sender.Send(new ValidatedPing("hi"));
+
+        Assert.Equal(["AuditPre", "Validation.Before", "Validation.After", "AuditPost"], log.Entries);
+        Assert.Equal("hi", response.Message);
     }
 }

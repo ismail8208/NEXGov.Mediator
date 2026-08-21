@@ -63,6 +63,28 @@ internal sealed class PerformanceBehavior<TRequest, TResponse> : IPipelineBehavi
     }
 }
 
+// Fourth open behavior, used only by MED-021's mixed individual+batch
+// AddOpenBehaviors order test (three pre-existing behaviors above are
+// already consumed by the plain three-behavior order test).
+internal sealed class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
+{
+    private readonly ScanningLog _log;
+
+    public CachingBehavior(ScanningLog log)
+    {
+        _log = log;
+    }
+
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        _log.Entries.Add("Caching.Before");
+        var response = await next(cancellationToken).ConfigureAwait(false);
+        _log.Entries.Add("Caching.After");
+        return response;
+    }
+}
+
 // Closed behavior: targets Ping/Pong only, used to prove AddBehavior does
 // not affect unrelated requests.
 internal sealed class PingOnlyBehavior : IPipelineBehavior<Ping, Pong>

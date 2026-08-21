@@ -495,6 +495,11 @@ Introduced in MED-011 alongside `MediatRServiceConfiguration.AddBehavior`/`AddOp
   processor *class* as a service; only the explicit `AddRequestPreProcessor`/`AddRequestPostProcessor`
   calls (or a manual `IPipelineBehavior<,>` registration) make any
   processor actually run.
+- **`AddOpenBehaviors` (MED-021) is only a configuration convenience** —
+  both overloads expand into the exact same ordered `BehaviorsToRegister`
+  model as calling `AddOpenBehavior` individually, one entry per call, in
+  order; there is no separate storage mechanism and no runtime behavior
+  distinct from the one-at-a-time API above.
 
 ## Generic request-handler registration principles
 

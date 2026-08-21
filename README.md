@@ -12,7 +12,7 @@ dispatch, notifications/`Publish` (with a pluggable, DI-configurable
 `INotificationPublisher` strategy — sequential by default), pipeline
 behaviors, pre/post processors, exception handlers/actions, and
 dependency-injection registration (`AddMediatR` with assembly scanning,
-plus explicit `AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
+plus explicit `AddBehavior`/`AddOpenBehavior`/`AddOpenBehaviors`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
 registration) are implemented and tested. Streaming (request/handler/behavior
 contracts, runtime execution, and `AddMediatR` scanning/`AddStreamBehavior`/
 `AddOpenStreamBehavior` registration) is implemented and tested for closed
@@ -89,6 +89,10 @@ registered is outermost). `AddBehavior<T>()` registers a **closed**
 behavior targeting one specific request/response pair instead.
 `AddRequestPreProcessor`/`AddRequestPostProcessor` (and their
 `AddOpen*` variants) register pre/post processors the same way.
+`AddOpenBehaviors(...)` registers several open behaviors in one call —
+`cfg.AddOpenBehaviors([typeof(ValidationBehavior<,>), typeof(LoggingBehavior<,>)])`
+is equivalent to calling `AddOpenBehavior` once per type, in order; it is
+purely a convenience over the single-behavior form above.
 
 ### Streaming requests
 
@@ -240,7 +244,7 @@ is used as a compatibility reference.
       scanning for handlers, notification handlers, and exception
       handlers/actions)
 - [x] Explicit behavior/processor registration helpers (`AddBehavior`,
-      `AddOpenBehavior`, `AddRequestPreProcessor`,
+      `AddOpenBehavior`, `AddOpenBehaviors` (batch), `AddRequestPreProcessor`,
       `AddOpenRequestPreProcessor`, `AddRequestPostProcessor`,
       `AddOpenRequestPostProcessor`)
 - [x] Generic request-handler registration (`RegisterGenericHandlers`,

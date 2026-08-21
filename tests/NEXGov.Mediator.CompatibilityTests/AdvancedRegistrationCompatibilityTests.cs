@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using NEXGov.Mediator.Entities;
 
 namespace NEXGov.Mediator.CompatibilityTests;
 
@@ -97,6 +98,94 @@ public class AdvancedRegistrationCompatibilityTests
         Assert.Equal(typeof(ServiceLifetime), parameters[1].ParameterType);
         Assert.True(parameters[1].IsOptional);
         Assert.Equal(ServiceLifetime.Transient, parameters[1].DefaultValue);
+    }
+
+    // --- MED-021: OpenBehavior / AddOpenBehaviors ---
+
+    [Fact]
+    public void OpenBehavior_IsPublicNonSealedClass_InEntitiesNamespace()
+    {
+        var type = typeof(OpenBehavior);
+
+        Assert.True(type.IsPublic);
+        Assert.True(type.IsClass);
+        Assert.False(type.IsSealed);
+        Assert.False(type.IsAbstract);
+        Assert.False(type.IsValueType);
+        Assert.Equal("NEXGov.Mediator.Entities", type.Namespace);
+    }
+
+    [Fact]
+    public void OpenBehavior_HasExactlyOnePublicConstructor_WithExpectedSignature()
+    {
+        var constructors = typeof(OpenBehavior).GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+        var constructor = Assert.Single(constructors);
+
+        var parameters = constructor.GetParameters();
+        Assert.Equal(2, parameters.Length);
+        Assert.Equal("openBehaviorType", parameters[0].Name);
+        Assert.Equal(typeof(Type), parameters[0].ParameterType);
+        Assert.False(parameters[0].IsOptional);
+        Assert.Equal("serviceLifetime", parameters[1].Name);
+        Assert.Equal(typeof(ServiceLifetime), parameters[1].ParameterType);
+        Assert.True(parameters[1].IsOptional);
+        Assert.Equal(ServiceLifetime.Transient, parameters[1].DefaultValue);
+    }
+
+    [Fact]
+    public void OpenBehavior_HasExactlyTwoPublicReadOnlyProperties()
+    {
+        var properties = typeof(OpenBehavior).GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+        Assert.Equal(2, properties.Length);
+
+        var openBehaviorType = properties.Single(p => p.Name == "OpenBehaviorType");
+        Assert.Equal(typeof(Type), openBehaviorType.PropertyType);
+        Assert.True(openBehaviorType.CanRead);
+        Assert.Null(openBehaviorType.SetMethod);
+
+        var serviceLifetime = properties.Single(p => p.Name == "ServiceLifetime");
+        Assert.Equal(typeof(ServiceLifetime), serviceLifetime.PropertyType);
+        Assert.True(serviceLifetime.CanRead);
+        Assert.Null(serviceLifetime.SetMethod);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_HasExactlyTwoOverloads()
+    {
+        Assert.Equal(2, MethodsNamed("AddOpenBehaviors").Length);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_TypeCollectionOverload_HasExpectedSignature()
+    {
+        var method = MethodsNamed("AddOpenBehaviors")
+            .Single(m => m.GetParameters()[0].ParameterType == typeof(IEnumerable<Type>));
+
+        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+
+        var parameters = method.GetParameters();
+        Assert.Equal(2, parameters.Length);
+        Assert.Equal("openBehaviorTypes", parameters[0].Name);
+        Assert.Equal(typeof(IEnumerable<Type>), parameters[0].ParameterType);
+        Assert.Equal("serviceLifetime", parameters[1].Name);
+        Assert.Equal(typeof(ServiceLifetime), parameters[1].ParameterType);
+        Assert.True(parameters[1].IsOptional);
+        Assert.Equal(ServiceLifetime.Transient, parameters[1].DefaultValue);
+    }
+
+    [Fact]
+    public void AddOpenBehaviors_OpenBehaviorCollectionOverload_HasExpectedSignature()
+    {
+        var method = MethodsNamed("AddOpenBehaviors")
+            .Single(m => m.GetParameters()[0].ParameterType == typeof(IEnumerable<OpenBehavior>));
+
+        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+
+        var parameters = method.GetParameters();
+        Assert.Single(parameters);
+        Assert.Equal("openBehaviors", parameters[0].Name);
+        Assert.Equal(typeof(IEnumerable<OpenBehavior>), parameters[0].ParameterType);
     }
 
     // --- MED-019: AddStreamBehavior / AddOpenStreamBehavior ---

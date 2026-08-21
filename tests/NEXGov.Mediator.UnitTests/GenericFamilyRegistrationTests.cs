@@ -22,7 +22,7 @@ public class GenericFamilyRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -387,7 +387,7 @@ public class GenericFamilyRegistrationTests
         var services = new ServiceCollection();
         services.AddSingleton(new List<string>());
 
-        var exception = Assert.Throws<ArgumentException>(() => services.AddMediatR(cfg =>
+        var exception = Assert.Throws<ArgumentException>(() => services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -423,7 +423,7 @@ public class GenericFamilyRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(new List<string>());
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AutoRegisterRequestProcessors = true;

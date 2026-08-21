@@ -13,7 +13,7 @@ public class UnitPipelineIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.AddBehavior<DeleteWidgetBehavior>();
@@ -32,7 +32,7 @@ public class UnitPipelineIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.AddRequestPostProcessor<DeleteWidgetPostProcessor>();
@@ -51,7 +51,7 @@ public class UnitPipelineIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -76,7 +76,7 @@ public class UnitPipelineIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>();
             cfg.RegisterGenericHandlers = true;

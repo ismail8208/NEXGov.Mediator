@@ -8,7 +8,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// and registers <see cref="NEXGov.Mediator.IMediator"/>, <see cref="NEXGov.Mediator.ISender"/>, and
 /// <see cref="NEXGov.Mediator.IPublisher"/>.
 /// </summary>
-public static class MediatRServiceCollectionExtensions
+public static class NEXMediatorServiceCollectionExtensions
 {
     /// <summary>
     /// Registers handlers and mediator types found by scanning the assemblies configured through <paramref name="configuration"/>.
@@ -18,7 +18,7 @@ public static class MediatRServiceCollectionExtensions
     /// <returns>The same service collection, for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="services"/> or <paramref name="configuration"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">No assembly was configured to scan.</exception>
-    public static IServiceCollection AddMediatR(this IServiceCollection services, Action<MediatRServiceConfiguration> configuration)
+    public static IServiceCollection AddNEXMediator(this IServiceCollection services, Action<MediatRServiceConfiguration> configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
@@ -26,7 +26,7 @@ public static class MediatRServiceCollectionExtensions
         var serviceConfiguration = new MediatRServiceConfiguration();
         configuration.Invoke(serviceConfiguration);
 
-        return services.AddMediatR(serviceConfiguration);
+        return services.AddNEXMediator(serviceConfiguration);
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public static class MediatRServiceCollectionExtensions
     /// <returns>The same service collection, for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="services"/> or <paramref name="configuration"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">No assembly was configured to scan.</exception>
-    public static IServiceCollection AddMediatR(this IServiceCollection services, MediatRServiceConfiguration configuration)
+    public static IServiceCollection AddNEXMediator(this IServiceCollection services, MediatRServiceConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
@@ -47,7 +47,7 @@ public static class MediatRServiceCollectionExtensions
             throw new ArgumentException("No assemblies found to scan. Supply at least one assembly to scan for handlers.");
         }
 
-        ServiceRegistrar.AddMediatRClasses(services, configuration);
+        ServiceRegistrar.AddNEXMediatorClasses(services, configuration);
         ServiceRegistrar.AddRequiredServices(services, configuration);
 
         return services;

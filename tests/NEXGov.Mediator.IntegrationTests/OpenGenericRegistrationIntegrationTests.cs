@@ -26,7 +26,7 @@ public class OpenGenericRegistrationIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<OpenGenericDiMarker>();
             cfg.AutoRegisterRequestProcessors = true;
@@ -68,7 +68,7 @@ public class OpenGenericRegistrationIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<OpenGenericDiMarker>();
             cfg.RegisterGenericHandlers = true;

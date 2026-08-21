@@ -12,7 +12,7 @@ public class AddMediatRTests
     {
         IServiceCollection services = null!;
 
-        Assert.Throws<ArgumentNullException>(() => services.AddMediatR(_ => { }));
+        Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator(_ => { }));
     }
 
     [Fact]
@@ -20,7 +20,7 @@ public class AddMediatRTests
     {
         var services = new ServiceCollection();
 
-        Assert.Throws<ArgumentNullException>(() => services.AddMediatR((Action<MediatRServiceConfiguration>)null!));
+        Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator((Action<MediatRServiceConfiguration>)null!));
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class AddMediatRTests
         var configuration = new MediatRServiceConfiguration();
         configuration.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
 
-        Assert.Throws<ArgumentNullException>(() => services.AddMediatR(configuration));
+        Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator(configuration));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class AddMediatRTests
     {
         var services = new ServiceCollection();
 
-        Assert.Throws<ArgumentNullException>(() => services.AddMediatR((MediatRServiceConfiguration)null!));
+        Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator((MediatRServiceConfiguration)null!));
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class AddMediatRTests
     {
         var services = new ServiceCollection();
 
-        var exception = Assert.Throws<ArgumentException>(() => services.AddMediatR(_ => { }));
+        var exception = Assert.Throws<ArgumentException>(() => services.AddNEXMediator(_ => { }));
 
         Assert.Contains("assembl", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -56,7 +56,7 @@ public class AddMediatRTests
     {
         var services = new ServiceCollection();
 
-        var result = services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        var result = services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
 
         Assert.Same(services, result);
     }
@@ -67,7 +67,7 @@ public class AddMediatRTests
     public void AddMediatR_RegistersIMediator_ISender_IPublisher_ResolvingToTheSameMediatorImplementation()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
 
         var mediator = provider.GetRequiredService<IMediator>();
@@ -83,7 +83,7 @@ public class AddMediatRTests
     public void AddMediatR_RegistersIMediator_ISender_IPublisher_WithTransientLifetime_ByDefault()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
 
         Assert.Equal(ServiceLifetime.Transient, services.Single(sd => sd.ServiceType == typeof(IMediator)).Lifetime);
         Assert.Equal(ServiceLifetime.Transient, services.Single(sd => sd.ServiceType == typeof(ISender)).Lifetime);
@@ -94,7 +94,7 @@ public class AddMediatRTests
     public void AddMediatR_UsesConfiguredLifetime_ForCoreServices()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.Lifetime = ServiceLifetime.Scoped;
@@ -107,7 +107,7 @@ public class AddMediatRTests
     public void AddMediatR_RegistersScannedHandlers_AsTransient()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
 
         var descriptor = services.Single(sd => sd.ServiceType == typeof(IRequestHandler<ScannedPing, ScannedPong>));
 
@@ -120,7 +120,7 @@ public class AddMediatRTests
     public async Task RequestHandler_IsDiscoveredByScanning_AndSendWorksWithoutManualRegistration()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -133,7 +133,7 @@ public class AddMediatRTests
     public void AbstractHandlerImplementations_AreNotRegistered()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
 
         var descriptor = services.Single(sd => sd.ServiceType == typeof(IRequestHandler<ScannedPing, ScannedPong>));
 
@@ -144,7 +144,7 @@ public class AddMediatRTests
     public async Task DuplicateClosedRequestHandlers_OnlyOneIsRegistered_AndSendDoesNotThrow()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -160,7 +160,7 @@ public class AddMediatRTests
     public async Task VoidRequestHandler_IsDiscoveredByScanning()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -175,7 +175,7 @@ public class AddMediatRTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var publisher = provider.GetRequiredService<IPublisher>();
 
@@ -190,7 +190,7 @@ public class AddMediatRTests
     public async Task ExceptionHandler_DiscoveredByScanning_AutomaticallyWiredIntoPipeline_RecoversException()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -208,7 +208,7 @@ public class AddMediatRTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -223,7 +223,7 @@ public class AddMediatRTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RequestExceptionActionProcessorStrategy = RequestExceptionActionProcessorStrategy.ApplyForAllExceptions;
@@ -243,7 +243,7 @@ public class AddMediatRTests
     public void AutoRegisterRequestProcessors_False_ByDefault_ProcessorImplementationIsNotRegistered()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
 
         Assert.DoesNotContain(services, sd => sd.ServiceType == typeof(IRequestPreProcessor<ScannedPreProcessedPing>));
     }
@@ -260,7 +260,7 @@ public class AddMediatRTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AutoRegisterRequestProcessors = true;
@@ -284,7 +284,7 @@ public class AddMediatRTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AutoRegisterRequestProcessors = true;
@@ -312,7 +312,7 @@ public class AddMediatRTests
     public void SameAssemblyRegisteredTwice_DoesNotProduceDuplicateHandlerRegistrations()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
@@ -328,7 +328,7 @@ public class AddMediatRTests
     {
         var services = new ServiceCollection();
         services.AddTransient<IRequestHandler<ScannedPing, ScannedPong>, ManualPingHandler>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -341,7 +341,7 @@ public class AddMediatRTests
     public async Task ManualRegistration_AfterAddMediatR_WinsOverScannedHandler()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         services.AddTransient<IRequestHandler<ScannedPing, ScannedPong>, ManualPingHandler>();
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
@@ -357,7 +357,7 @@ public class AddMediatRTests
     public async Task RegisterServicesFromAssembly_ScansTheGivenAssembly()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ScanningTestMarker).Assembly));
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssembly(typeof(ScanningTestMarker).Assembly));
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -370,7 +370,7 @@ public class AddMediatRTests
     public async Task RegisterServicesFromAssemblies_ScansEachGivenAssembly()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(typeof(ScanningTestMarker).Assembly));
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblies(typeof(ScanningTestMarker).Assembly));
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -383,7 +383,7 @@ public class AddMediatRTests
     public void RegisterServicesFromAssemblyContaining_NonGeneric_ScansTheAssemblyContainingTheGivenType()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining(typeof(ScanningTestMarker)));
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining(typeof(ScanningTestMarker)));
 
         Assert.Contains(services, sd => sd.ServiceType == typeof(IRequestHandler<ScannedPing, ScannedPong>));
     }
@@ -395,7 +395,7 @@ public class AddMediatRTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IScopedFixtureDependency, ScopedFixtureDependency>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();

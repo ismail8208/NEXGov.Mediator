@@ -32,7 +32,7 @@ public class StreamScanningIntegrationTests
     public async Task AutomaticDiscovery_GenericCreateStream_SucceedsWithNoManualRegistration()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<CountStream>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<CountStream>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -51,7 +51,7 @@ public class StreamScanningIntegrationTests
     public async Task AutomaticDiscovery_DynamicCreateStream_SucceedsWithNoManualRegistration_AndBoxesValuesCorrectly()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<CountStream>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<CountStream>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -90,7 +90,7 @@ public class StreamScanningIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<CountStream>();
             cfg.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>));
@@ -128,7 +128,7 @@ public class StreamScanningIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<CountStream>();
             cfg.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>));
@@ -177,7 +177,7 @@ public class StreamScanningIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<CountStream>();
             cfg.AddStreamBehavior<IStreamPipelineBehavior<CountStream, int>, CountStreamOnlyBehavior>();
@@ -218,7 +218,7 @@ public class StreamScanningIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<CountStream>();
             cfg.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>));
@@ -263,7 +263,7 @@ public class StreamScanningIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(observedIds);
         services.AddScoped<ScopedBehaviorMarker>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<CountStream>();
             cfg.AddStreamBehavior<IStreamPipelineBehavior<CountStream, int>, ScopedTaggingBehavior>(ServiceLifetime.Scoped);
@@ -297,7 +297,7 @@ public class StreamScanningIntegrationTests
         // (matching IPipelineBehavior<,>'s own never-scanned rule) — only
         // AddStreamBehavior/AddOpenStreamBehavior wires one in.
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<CountStream>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<CountStream>());
 
         Assert.DoesNotContain(services, sd =>
             sd.ServiceType.IsGenericType && sd.ServiceType.GetGenericTypeDefinition() == typeof(IStreamPipelineBehavior<,>));

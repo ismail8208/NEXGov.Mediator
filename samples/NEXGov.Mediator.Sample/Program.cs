@@ -4,7 +4,7 @@ using NEXGov.Mediator.Sample;
 
 var services = new ServiceCollection();
 
-services.AddMediatR(cfg =>
+services.AddNEXMediator(cfg =>
 {
     cfg.RegisterServicesFromAssemblyContaining<Program>();
     cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));

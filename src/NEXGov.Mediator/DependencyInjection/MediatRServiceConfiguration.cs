@@ -8,7 +8,7 @@ using NEXGov.Mediator.Pipeline;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Configures how <see cref="MediatRServiceCollectionExtensions.AddMediatR(IServiceCollection, Action{MediatRServiceConfiguration})"/>
+/// Configures how <see cref="NEXMediatorServiceCollectionExtensions.AddNEXMediator(IServiceCollection, Action{MediatRServiceConfiguration})"/>
 /// scans assemblies and registers services.
 /// </summary>
 public class MediatRServiceConfiguration

@@ -23,7 +23,7 @@ public class ClosedBehaviorRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ClosedBehaviorDiMarker>();
             cfg.AddOpenBehavior(typeof(ComplexNestedBehavior<,>));
@@ -53,7 +53,7 @@ public class ClosedBehaviorRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ClosedBehaviorDiMarker>();
             cfg.AddOpenBehavior(typeof(ComplexNestedBehavior<,>));
@@ -87,7 +87,7 @@ public class ClosedBehaviorRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ClosedBehaviorDiMarker>();
             cfg.AddOpenBehavior(typeof(ComplexNestedBehavior<,>));
@@ -117,7 +117,7 @@ public class ClosedBehaviorRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ClosedBehaviorDiMarker>();
             cfg.AddOpenBehavior(typeof(ComplexNestedBehavior<,>));
@@ -148,7 +148,7 @@ public class ClosedBehaviorRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ClosedBehaviorDiMarker>();
             cfg.AutoRegisterRequestProcessors = true;

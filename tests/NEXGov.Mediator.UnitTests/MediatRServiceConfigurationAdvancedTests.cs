@@ -159,7 +159,7 @@ public class MediatRServiceConfigurationAdvancedTests
 
         var services = new ServiceCollection();
         services.AddSingleton(new ScanningLog());
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AddOpenBehavior(typeof(LoggingBehavior<Ping, Pong>));

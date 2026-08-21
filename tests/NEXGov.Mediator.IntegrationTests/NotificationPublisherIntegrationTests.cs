@@ -67,7 +67,7 @@ public class NotificationPublisherIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisherType = typeof(ReversingPublisher);
@@ -93,7 +93,7 @@ public class NotificationPublisherIntegrationTests
         var customInstance = new ReversingPublisher(log);
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisher = customInstance;
@@ -116,7 +116,7 @@ public class NotificationPublisherIntegrationTests
     public void Precedence_A_NoConfiguration_ResolvesForeachAwaitPublisher()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Announcement>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<Announcement>());
         using var provider = services.BuildServiceProvider();
 
         Assert.IsType<ForeachAwaitPublisher>(provider.GetRequiredService<INotificationPublisher>());
@@ -127,7 +127,7 @@ public class NotificationPublisherIntegrationTests
     {
         var instance = new ForeachAwaitPublisher();
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisher = instance;
@@ -143,7 +143,7 @@ public class NotificationPublisherIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisherType = typeof(ReversingPublisher);
@@ -160,7 +160,7 @@ public class NotificationPublisherIntegrationTests
         var instance = new ForeachAwaitPublisher();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisher = instance;
@@ -183,7 +183,7 @@ public class NotificationPublisherIntegrationTests
         var instance = new ForeachAwaitPublisher();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisherType = typeof(ReversingPublisher);
@@ -207,7 +207,7 @@ public class NotificationPublisherIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisherType = typeof(ReversingPublisher);
@@ -236,7 +236,7 @@ public class NotificationPublisherIntegrationTests
         var gate = new TaskCompletionSource();
 
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisherType = typeof(TaskWhenAllPublisher);
@@ -312,7 +312,7 @@ public class NotificationPublisherIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(observedIds);
         services.AddScoped<ScopedMarker>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisherType = typeof(TaskWhenAllPublisher);
@@ -343,7 +343,7 @@ public class NotificationPublisherIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<Announcement>();
             cfg.NotificationPublisherType = typeof(ReversingPublisher);

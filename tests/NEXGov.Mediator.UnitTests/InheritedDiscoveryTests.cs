@@ -13,7 +13,7 @@ public class InheritedDiscoveryTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(new ScanningLog());
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AutoRegisterRequestProcessors = true;
@@ -28,7 +28,7 @@ public class InheritedDiscoveryTests
     public async Task MandatoryAcceptance_InheritedRequestHandler_DispatchesSuccessfully_WithNoManualRegistration()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -248,7 +248,7 @@ public class InheritedDiscoveryTests
     public async Task PrivateNestedHandler_IsDiscoveredAndDispatches()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -339,7 +339,7 @@ public class InheritedDiscoveryTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AddBehavior<ViaAbstractBaseBehavior>();
@@ -358,7 +358,7 @@ public class InheritedDiscoveryTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AddOpenBehavior(typeof(OpenBehaviorViaAbstractBase<,>));
@@ -377,7 +377,7 @@ public class InheritedDiscoveryTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AddBehavior<ViaCustomInterfaceBehavior>();

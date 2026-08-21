@@ -13,7 +13,7 @@ public class GenericHandlerRegistrationIntegrationTests
     public async Task GenericResponseRequest_NoManualRegistration_DispatchesToTheGeneratedHandler()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -33,7 +33,7 @@ public class GenericHandlerRegistrationIntegrationTests
     {
         GenericDiCommandHandler<GenericDiCustomer>.Handled.Clear();
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -52,7 +52,7 @@ public class GenericHandlerRegistrationIntegrationTests
     public async Task MultipleClosingTypes_EachDispatchesSuccessfully()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -75,7 +75,7 @@ public class GenericHandlerRegistrationIntegrationTests
     public async Task RegisterGenericHandlers_Disabled_GenericRequestFailsViaMissingHandlerPath()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -89,7 +89,7 @@ public class GenericHandlerRegistrationIntegrationTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -126,7 +126,7 @@ public class GenericHandlerRegistrationIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -149,7 +149,7 @@ public class GenericHandlerRegistrationIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -170,7 +170,7 @@ public class GenericHandlerRegistrationIntegrationTests
     public async Task GeneratedGenericHandler_ExceptionsStillFlowThroughTheOrdinaryExceptionPipeline()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericDiMarker>();
             cfg.RegisterGenericHandlers = true;

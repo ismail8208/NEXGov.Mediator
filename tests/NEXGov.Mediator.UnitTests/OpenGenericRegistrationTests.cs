@@ -28,7 +28,7 @@ public class OpenGenericRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.TypeEvaluator = BaseExclusions;
@@ -182,7 +182,7 @@ public class OpenGenericRegistrationTests
         var services = new ServiceCollection();
         services.AddSingleton(new List<string>());
         services.AddTransient(typeof(INotificationHandler<>), typeof(OpenToOpenNotificationHandler<>));
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.TypeEvaluator = type => BaseExclusions(type) && type != typeof(SecondOpenToOpenNotificationHandler<>);

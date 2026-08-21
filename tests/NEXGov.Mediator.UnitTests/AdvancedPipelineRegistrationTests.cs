@@ -11,7 +11,7 @@ public class AdvancedPipelineRegistrationTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             configure(cfg);
@@ -186,7 +186,7 @@ public class AdvancedPipelineRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(new ScanningLog());
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AutoRegisterRequestProcessors = true;
@@ -354,7 +354,7 @@ public class AdvancedPipelineRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(new ScanningLog());
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AddOpenBehavior(typeof(LoggingBehavior<,>), lifetime);
@@ -502,7 +502,7 @@ public class AdvancedPipelineRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(new ScanningLog());
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AddOpenBehaviors([typeof(LoggingBehavior<,>)], lifetime);
@@ -520,7 +520,7 @@ public class AdvancedPipelineRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(new ScanningLog());
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AddOpenBehaviors(

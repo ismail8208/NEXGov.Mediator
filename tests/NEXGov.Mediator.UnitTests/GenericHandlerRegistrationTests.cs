@@ -14,7 +14,7 @@ public class GenericHandlerRegistrationTests
     private static IServiceCollection BuildServices(Action<MediatRServiceConfiguration>? configure = null)
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             // OpenGenericHandler<T> (InheritedDiscoveryFixtures.cs, MED-012) and
@@ -447,7 +447,7 @@ public class GenericHandlerRegistrationTests
         // wins" here — whichever registration is last in the provider wins.
         var services = new ServiceCollection();
         services.AddTransient<IRequestHandler<DuplicateGenericQuery<GenericFixtureCustomer>, EntityDto<GenericFixtureCustomer>>, ManualDuplicateGenericQueryHandler>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -465,7 +465,7 @@ public class GenericHandlerRegistrationTests
     public async Task ManualRegistration_AfterAddMediatR_OverridesTheGeneratedGenericRegistration()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterGenericHandlers = true;

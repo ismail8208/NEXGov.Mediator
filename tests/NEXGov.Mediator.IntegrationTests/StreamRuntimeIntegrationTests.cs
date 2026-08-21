@@ -28,7 +28,7 @@ public class StreamRuntimeIntegrationTests
     public async Task ISender_CreateStream_ResolvesManuallyRegisteredHandler_ThroughRealContainer()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         services.AddTransient<IStreamRequestHandler<LetterStream, string>, LetterStreamHandler>();
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
@@ -64,7 +64,7 @@ public class StreamRuntimeIntegrationTests
     public async Task ScopedStreamHandlerDependency_ResolvesTheCorrectInstance_PerScope_NotCached()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         services.AddScoped<ScopedMarker>();
         services.AddTransient<IStreamRequestHandler<IdentityStream, Guid>, IdentityStreamHandler>();
         using var provider = services.BuildServiceProvider();

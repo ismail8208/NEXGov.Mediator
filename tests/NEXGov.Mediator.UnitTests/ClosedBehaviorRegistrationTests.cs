@@ -14,7 +14,7 @@ public class ClosedBehaviorRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             configure(cfg);
@@ -214,7 +214,7 @@ public class ClosedBehaviorRegistrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>(); // same assembly, registered twice
@@ -251,7 +251,7 @@ public class ClosedBehaviorRegistrationTests
         var services = new ServiceCollection();
         services.AddSingleton(new List<string>());
         services.AddTransient<IPipelineBehavior<DuplicateQuery, DuplicateNestedResponse<string>>, ManualDuplicateBehavior>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AddOpenBehavior(typeof(DuplicateNestedBehavior<,>));

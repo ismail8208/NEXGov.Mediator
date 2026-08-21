@@ -17,7 +17,7 @@ public class NotificationHandlerConvenienceIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         using var provider = services.BuildServiceProvider();
         var publisher = provider.GetRequiredService<IPublisher>();
 
@@ -32,7 +32,7 @@ public class NotificationHandlerConvenienceIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         using var provider = services.BuildServiceProvider();
         var publisher = provider.GetRequiredService<IPublisher>();
 
@@ -50,7 +50,7 @@ public class NotificationHandlerConvenienceIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         using var provider = services.BuildServiceProvider();
 
         using (var scope1 = provider.CreateScope())
@@ -77,7 +77,7 @@ public class NotificationHandlerConvenienceIntegrationTests
     public async Task ConvenienceHandler_Exception_PropagatesThroughPublishUnwrapped()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         using var provider = services.BuildServiceProvider();
         var publisher = provider.GetRequiredService<IPublisher>();
 
@@ -93,7 +93,7 @@ public class NotificationHandlerConvenienceIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         using var provider = services.BuildServiceProvider();
         var publisher = provider.GetRequiredService<IPublisher>();
 
@@ -110,7 +110,7 @@ public class NotificationHandlerConvenienceIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.NotificationPublisherType = typeof(TaskWhenAllPublisher);

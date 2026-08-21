@@ -17,7 +17,7 @@ public class AdvancedRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.AddOpenBehavior(typeof(ScopedAuditBehavior<,>));
@@ -53,7 +53,7 @@ public class AdvancedRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.AddOpenRequestPreProcessor(typeof(ScopedAuditPreProcessor<>));
@@ -80,7 +80,7 @@ public class AdvancedRegistrationIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.AddOpenBehavior(typeof(LoggingBehavior<,>), lifetime);
@@ -103,7 +103,7 @@ public class AdvancedRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
 
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
 
@@ -139,7 +139,7 @@ public class AdvancedRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
 
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
 
@@ -171,7 +171,7 @@ public class AdvancedRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
 
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
 
@@ -200,7 +200,7 @@ public class AdvancedRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
 
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
 

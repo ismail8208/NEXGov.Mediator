@@ -165,7 +165,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceCollectionExtensions_HasExpectedFullNameAndIsPublicStaticClass()
     {
-        var type = typeof(MediatRServiceCollectionExtensions);
+        var type = typeof(NEXMediatorServiceCollectionExtensions);
 
         Assert.Equal("Microsoft.Extensions.DependencyInjection.MediatRServiceCollectionExtensions", type.FullName);
         Assert.True(type.IsClass);
@@ -176,7 +176,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void AddMediatR_DelegateOverload_HasExpectedSignature()
     {
-        var method = typeof(MediatRServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
+        var method = typeof(NEXMediatorServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Single(m => m.Name == "AddMediatR" && m.GetParameters()[1].ParameterType != typeof(MediatRServiceConfiguration));
 
         Assert.True(method.IsDefined(typeof(ExtensionAttribute), inherit: false));
@@ -194,7 +194,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void AddMediatR_ConfigurationInstanceOverload_HasExpectedSignature()
     {
-        var method = typeof(MediatRServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
+        var method = typeof(NEXMediatorServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Single(m => m.Name == "AddMediatR" && m.GetParameters()[1].ParameterType == typeof(MediatRServiceConfiguration));
 
         Assert.True(method.IsDefined(typeof(ExtensionAttribute), inherit: false));
@@ -211,7 +211,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void AddMediatR_HasExactlyTwoOverloads()
     {
-        var methods = typeof(MediatRServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
+        var methods = typeof(NEXMediatorServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Where(m => m.Name == "AddMediatR")
             .ToArray();
 

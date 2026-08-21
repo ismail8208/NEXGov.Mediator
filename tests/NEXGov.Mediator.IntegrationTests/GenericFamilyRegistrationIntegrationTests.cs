@@ -26,7 +26,7 @@ public class GenericFamilyRegistrationIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton(log);
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericFamilyDiMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -85,7 +85,7 @@ public class GenericFamilyRegistrationIntegrationTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<GenericFamilyDiMarker>();
             cfg.RegisterGenericHandlers = true;

@@ -13,7 +13,7 @@ public class UnitPipelineTests
         var services = new ServiceCollection();
         var log = new ScanningLog();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             configure(cfg);
@@ -79,7 +79,7 @@ public class UnitPipelineTests
         services.AddSingleton<IRequestHandler<DeleteUser>>(new DeleteUserHandler(log));
         services.AddSingleton<IRequestPostProcessor<DeleteUser, Unit>>(postProcessor);
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(RequestPostProcessorBehavior<,>));
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 

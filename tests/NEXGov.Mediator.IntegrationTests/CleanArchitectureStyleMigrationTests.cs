@@ -19,7 +19,7 @@ public class CleanArchitectureStyleMigrationTests
         // Exactly the shape verified live from CleanArchitecture's
         // src/Application/DependencyInjection.cs, translated to
         // NEXGov.Mediator's identical API:
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(CreateTodoItemCommand).Assembly);
             cfg.AddOpenRequestPreProcessor(typeof(LoggingBehaviour<>));

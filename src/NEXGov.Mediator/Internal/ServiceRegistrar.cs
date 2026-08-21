@@ -12,7 +12,7 @@ namespace NEXGov.Mediator.Internal;
 /// </summary>
 internal static class ServiceRegistrar
 {
-    public static void AddMediatRClasses(IServiceCollection services, MediatRServiceConfiguration configuration)
+    public static void AddNEXMediatorClasses(IServiceCollection services, MediatRServiceConfiguration configuration)
     {
         var assembliesToScan = configuration.AssembliesToRegister.Distinct().ToArray();
 

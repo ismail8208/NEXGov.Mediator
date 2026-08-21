@@ -14,7 +14,7 @@ public class AddMediatRIntegrationTests
     {
         var services = new ServiceCollection();
 
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
 
         using var provider = services.BuildServiceProvider();
 
@@ -38,7 +38,7 @@ public class AddMediatRIntegrationTests
     {
         var services = new ServiceCollection();
 
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblies(
             typeof(DiTestMarker).Assembly,
             typeof(NEXGov.Mediator.Sample.Greet).Assembly));
 
@@ -57,7 +57,7 @@ public class AddMediatRIntegrationTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IDiScopedDependency, DiScopedDependency>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>());
         using var provider = services.BuildServiceProvider();
 
         static Guid ExtractId(string message) => Guid.Parse(message[(message.IndexOf(':') + 1)..]);

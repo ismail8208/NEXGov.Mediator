@@ -14,7 +14,7 @@ public class StreamScanningTests
     public async Task ScannedStreamHandler_IsDiscoveredByScanning_AndResolvedByCreateStream()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -31,7 +31,7 @@ public class StreamScanningTests
     public void AddMediatR_RegistersScannedStreamHandlers_AsTransient()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
 
         var descriptor = services.Single(sd => sd.ServiceType == typeof(IStreamRequestHandler<ScannedNumberStream, int>));
 
@@ -52,7 +52,7 @@ public class StreamScanningTests
         // item 4's "handler lifetime" requirement is satisfied by *matching
         // that existing target behavior*, not by making it configurable.
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.Lifetime = ServiceLifetime.Scoped;
@@ -67,7 +67,7 @@ public class StreamScanningTests
     public void AbstractStreamHandler_IsNeverRegistered_EvenThoughItImplementsTheInterface()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
 
         var descriptor = services.Single(sd => sd.ServiceType == typeof(IStreamRequestHandler<ScannedNumberStream, int>));
 
@@ -78,7 +78,7 @@ public class StreamScanningTests
     public async Task DuplicateClosedStreamHandlers_OnlyOneIsRegistered_AndCreateStreamDoesNotThrow()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -102,7 +102,7 @@ public class StreamScanningTests
         // a manual registration made before AddMediatR wins.
         var services = new ServiceCollection();
         services.AddTransient<IStreamRequestHandler<ScannedNumberStream, int>>(_ => new ManualNumberStreamHandler());
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -133,7 +133,7 @@ public class StreamScanningTests
     public async Task StreamHandler_ImplementedViaCustomInterfaceExtendingTheOpenInterface_IsDiscovered()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -150,7 +150,7 @@ public class StreamScanningTests
     public async Task StreamHandler_ImplementedViaNonAbstractIntermediateBase_IsDiscovered_AndAbstractBaseIsNot()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -170,7 +170,7 @@ public class StreamScanningTests
     public async Task StreamHandler_ImplementedTwoLevelsUpTheClassHierarchy_IsDiscovered()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -192,7 +192,7 @@ public class StreamScanningTests
     public async Task ConcreteType_ImplementingTwoDistinctStreamInterfaces_RegistersBoth_AndBothDispatchCorrectly()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
@@ -221,7 +221,7 @@ public class StreamScanningTests
     public void TypeEvaluator_ExcludingAStreamHandlerType_PreventsItsRegistration()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.TypeEvaluator = type => type != typeof(FilteredOutStreamHandler);
@@ -234,7 +234,7 @@ public class StreamScanningTests
     public async Task TypeEvaluator_ExcludingAStreamHandlerType_LeavesCreateStreamUnresolvable()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.TypeEvaluator = type => type != typeof(FilteredOutStreamHandler);
@@ -265,7 +265,7 @@ public class StreamScanningTests
         // positive, working acceptance path lives in GenericFamilyRegistrationTests (MED-022).
         var services = new ServiceCollection();
 
-        var exception = Assert.Throws<ArgumentException>(() => services.AddMediatR(cfg =>
+        var exception = Assert.Throws<ArgumentException>(() => services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterGenericHandlers = true;
@@ -285,7 +285,7 @@ public class StreamScanningTests
     public void RegisterServicesFromAssembly_RegisteredTwice_DoesNotDuplicateStreamHandlerDescriptors()
     {
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(ScanningTestMarker).Assembly);
             cfg.RegisterServicesFromAssembly(typeof(ScanningTestMarker).Assembly);
@@ -300,11 +300,11 @@ public class StreamScanningTests
     public void RegisterServicesFromAssemblies_AndRegisterServicesFromAssemblyContaining_BothDiscoverStreamHandlers()
     {
         var viaAssemblies = new ServiceCollection();
-        viaAssemblies.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(typeof(ScanningTestMarker).Assembly));
+        viaAssemblies.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblies(typeof(ScanningTestMarker).Assembly));
         Assert.Contains(viaAssemblies, sd => sd.ServiceType == typeof(IStreamRequestHandler<ScannedNumberStream, int>));
 
         var viaContaining = new ServiceCollection();
-        viaContaining.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        viaContaining.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         Assert.Contains(viaContaining, sd => sd.ServiceType == typeof(IStreamRequestHandler<ScannedNumberStream, int>));
     }
 
@@ -315,7 +315,7 @@ public class StreamScanningTests
     {
         var services = new ServiceCollection();
         services.AddScoped<IScopedFixtureDependency, ScopedFixtureDependency>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
+        services.AddNEXMediator(cfg => cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>());
         using var provider = services.BuildServiceProvider();
 
         using var scopeA = provider.CreateScope();

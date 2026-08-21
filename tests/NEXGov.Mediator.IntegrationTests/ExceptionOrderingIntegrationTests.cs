@@ -41,7 +41,7 @@ public class ExceptionOrderingIntegrationTests
             typeof(IRequestExceptionHandler<CreateOrder, OrderResult, InvalidOperationException>),
             typeof(ExactNamespaceOrderExceptionHandler));
 
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblies(typeof(DiTestMarker).Assembly, typeof(NEXGov.Mediator.Sample.Greet).Assembly);
             cfg.TypeEvaluator = type => type == typeof(ThrowingCreateOrderHandler);
@@ -71,7 +71,7 @@ public class ExceptionOrderingIntegrationTests
         services.AddSingleton(typeof(IRequestExceptionHandler<CreateOrder, OrderResult, InvalidOperationException>), typeof(ParentNamespaceOrderExceptionHandler));
         services.AddSingleton(typeof(IRequestExceptionHandler<CreateOrder, OrderResult, InvalidOperationException>), typeof(ExactNamespaceOrderExceptionHandler));
 
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.TypeEvaluator = type => type == typeof(ThrowingCreateOrderHandler);
@@ -101,7 +101,7 @@ public class ExceptionOrderingIntegrationTests
         services.AddSingleton(typeof(IRequestExceptionAction<CreateOrder, InvalidOperationException>), typeof(ParentNamespaceOrderExceptionAction));
         services.AddSingleton(typeof(IRequestExceptionAction<CreateOrder, InvalidOperationException>), typeof(ExactNamespaceOrderExceptionAction));
 
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.TypeEvaluator = type => type == typeof(ThrowingCreateOrderHandler);
@@ -122,7 +122,7 @@ public class ExceptionOrderingIntegrationTests
         var log = new List<string>();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.TypeEvaluator = type => type == typeof(ThrowingCreateOrderHandler) || type == typeof(DerivedOrderExceptionHandler);
@@ -148,7 +148,7 @@ public class ExceptionOrderingIntegrationTests
         services.AddSingleton(typeof(IRequestExceptionHandler<ThrowingDeleteWidget, Unit, InvalidOperationException>), typeof(FarVoidExceptionHandler));
         services.AddSingleton(typeof(IRequestExceptionHandler<ThrowingDeleteWidget, Unit, InvalidOperationException>), typeof(DeleteWidgetExceptionHandler));
 
-        services.AddMediatR(cfg =>
+        services.AddNEXMediator(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<DiTestMarker>();
             cfg.TypeEvaluator = type => type == typeof(ThrowingDeleteWidgetHandler);

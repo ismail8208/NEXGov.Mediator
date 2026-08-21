@@ -48,16 +48,22 @@ current handler-proximity ordering and void-request `Unit` typing — is
 the advanced registration APIs (`AddBehavior`/`AddOpenBehavior`/processor
 equivalents) match current source, including several genuinely
 non-obvious verified quirks (documented in `docs/COMPATIBILITY.md`).
-Generic request-handler registration (MED-013) is implemented for request
-handlers only, a deliberate, documented scope narrowing from current
-MediatR's broader `RegisterGenericHandlers` reach.
+Generic handler/processor registration (`RegisterGenericHandlers`) was
+implemented for request handlers only in MED-013; **MED-022 re-verified
+current source's actual scope and generalized it** to every family
+current source's own shared closing algorithm drives —
+`INotificationHandler<>`, `IStreamRequestHandler<,>`,
+`IRequestExceptionHandler<,,>`, `IRequestExceptionAction<,>`, and (when
+`AutoRegisterRequestProcessors` is also `true`)
+`IRequestPreProcessor<>`/`IRequestPostProcessor<,>` — closing the
+scope-narrowing gap this audit previously tracked.
 
 Streaming is now complete end to end: contracts (MED-017), runtime
-dispatch/pipeline composition (MED-018), and DI registration — both
+dispatch/pipeline composition (MED-018), DI registration — both
 automatic `AddMediatR` scanning of closed `IStreamRequestHandler<,>`
 implementations and explicit `AddStreamBehavior`/`AddOpenStreamBehavior`
-configuration (MED-019) — leaving only the pre-existing, broader
-generic-family-expansion gap (see below), not a streaming-specific one.
+configuration (MED-019) — and, as of MED-022, generic (open-generic)
+`IStreamRequestHandler<,>` expansion under `RegisterGenericHandlers`.
 
 Notification publishing is also now complete: the pluggable
 `INotificationPublisher` abstraction, `NotificationHandlerExecutor`,
@@ -69,13 +75,21 @@ and `TaskWhenAllPublisher` (concurrent strategy), the second
 properties are all implemented and verified (MED-020).
 
 The `AddOpenBehaviors`(plural)/`OpenBehavior` batch-registration
-convenience — the last real functional gap identified by this audit — is
-now also implemented and verified (MED-021). The only remaining gap
-against current MediatR's functional surface is generic-family expansion
-beyond request handlers (see Partial Compatibility below). Commercial
+convenience was implemented and verified in MED-021, and generic-family
+expansion beyond request handlers — the last two functional gaps this
+audit tracked — was closed in MED-022. **Re-auditing current source for
+MED-022 surfaced two further, previously-unnoticed real gaps**, both
+newly tracked here (P2, see Gap Ranking): an unconditional (not
+`RegisterGenericHandlers`-gated) open-to-open registration mechanism
+current source applies to `INotificationHandler<>`/exception
+handlers/actions/pre/post-processors, with no NEXGov.Mediator equivalent;
+and an additional closing pass current source's `AddOpenBehavior` applies
+for an open behavior whose response type is a nested generic (e.g.
+`Result<T>`), also with no NEXGov.Mediator equivalent. Commercial
 licensing (`LicenseKey` on both `MediatRServiceConfiguration` and
-`Mediator`) is intentionally excluded, matching this project's
-established, repeatedly-stated policy.
+`Mediator`, and the `ILoggerFactory`/`MediatR.Licensing` dependency
+current source's `AddRequiredServices` now requires) is intentionally
+excluded, matching this project's established, repeatedly-stated policy.
 
 For the specific, real, currently-fetched MediatR usage pattern of the
 Jason Taylor CleanArchitecture reference template, every API call used is
@@ -123,7 +137,7 @@ re-confirmed here:
 | `RequestExceptionProcessorBehavior<,>` / `RequestExceptionActionProcessorBehavior<,>` | Exact-then-base exception-type walk; stop-on-handled; handler proximity ordering (MED-015, see its own audit item); action cross-level dedup (MED-015). |
 | `Unit` | See dedicated Unit Audit item — fully Verified. |
 | `IStreamRequest<out TResponse>` | Covariant. **MED-017 correction:** does **not** extend `IBaseRequest` — unlike `IRequest`/`IRequest<TResponse>`. The original MED-004 implementation incorrectly assumed the same inheritance pattern; re-verified against current source and fixed in MED-017. Contract only — see Streaming for the rest of the family. |
-| `IStreamRequestHandler<in TRequest, out TResponse>` | `where TRequest : IStreamRequest<TResponse>`; `IAsyncEnumerable<TResponse> Handle(TRequest, CancellationToken)`. Contract implemented in MED-017; runtime dispatch implemented in MED-018; **automatic `AddMediatR` scanning implemented in MED-019** — scanned via the identical `ConnectImplementationsToTypesClosing`-equivalent call used for `IRequestHandler<,>` (`TryAddTransient`, first-discovered wins, indirect/inherited implementations discovered, abstract types excluded — all verified with dedicated stream-specific regression tests). Open-generic stream handlers remain excluded from scanning regardless of `RegisterGenericHandlers` — a deliberate, documented narrowing consistent with the MED-013 policy already applied to `IRequestHandler<,>`; see Generic Handler Scope Audit. |
+| `IStreamRequestHandler<in TRequest, out TResponse>` | `where TRequest : IStreamRequest<TResponse>`; `IAsyncEnumerable<TResponse> Handle(TRequest, CancellationToken)`. Contract implemented in MED-017; runtime dispatch implemented in MED-018; **automatic `AddMediatR` scanning implemented in MED-019** — scanned via the identical `ConnectImplementationsToTypesClosing`-equivalent call used for `IRequestHandler<,>` (`TryAddTransient`, first-discovered wins, indirect/inherited implementations discovered, abstract types excluded — all verified with dedicated stream-specific regression tests). **Open-generic stream handlers are also expanded under `RegisterGenericHandlers` as of MED-022** — see the `RegisterGenericHandlers` scope row in Fully Compatible Core below. |
 | `IStreamPipelineBehavior<in TRequest, TResponse>` | `where TRequest : notnull`; `TResponse` has no variance modifier (verified — asymmetric with `IStreamRequestHandler<,>`'s covariant `TResponse`, but consistent with `IPipelineBehavior<,>`'s own unmodified `TResponse`); `IAsyncEnumerable<TResponse> Handle(TRequest, StreamHandlerDelegate<TResponse>, CancellationToken)`. Contract implemented in MED-017; runtime composition (first-registered-outermost, same convention as `IPipelineBehavior<,>`; short-circuit means the handler is never resolved) implemented in MED-018. **Never scanned** by `AddMediatR` (matching `IPipelineBehavior<,>`'s own never-scanned rule, verified against current source) — registered via `AddStreamBehavior`/`AddOpenStreamBehavior` (MED-019) or manually. |
 | `StreamHandlerDelegate<out TResponse>` | `delegate IAsyncEnumerable<TResponse> StreamHandlerDelegate<TResponse>()` — covariant, **no** `CancellationToken` parameter (verified — asymmetric with `RequestHandlerDelegate<TResponse>`, which takes one). Implemented in MED-017; MED-018's runtime bridges the single `CreateStream` token onto each composition boundary internally so it still reaches handlers/behaviors despite the delegate itself carrying none. |
 | `CreateStream(...)` runtime | Resolves the closed `IStreamRequestHandler<,>`/`IStreamPipelineBehavior<,>` for the request's **concrete runtime type** via `IServiceProvider`; fully lazy (argument validation is eager/synchronous, everything else — behavior resolution, handler resolution, execution — is deferred to first enumeration); never buffers; missing-handler `InvalidOperationException` surfaces on first enumeration, not at the `CreateStream` call; multiple registered handlers resolve to the last-registered one (plain `IServiceProvider.GetService<T>()` semantics). Implemented in MED-018, verified against current MediatR's `Mediator.CreateStream`/`StreamRequestHandlerWrapperImpl` runtime source. As of MED-019, works end to end for `AddMediatR`-discovered closed handlers with zero manual registration. |
@@ -136,23 +150,25 @@ re-confirmed here:
 | `NotificationHandlerExecutor` | `public record NotificationHandlerExecutor(object HandlerInstance, Func<INotification, CancellationToken, Task> HandlerCallback)` — positional record, verified exactly against current source. Implemented in MED-020. |
 | `ForeachAwaitPublisher` / `TaskWhenAllPublisher` | Namespace `NEXGov.Mediator.NotificationPublishers`; sequential (default) vs. concurrent `Task.WhenAll`-based strategies, both verified against current source including exact exception-propagation semantics (sequential: stops at first exception; concurrent: all handlers run, `await` surfaces one exception via standard unwrapping). Implemented in MED-020. |
 | `Mediator` constructors | `Mediator(IServiceProvider)` (delegates to the second overload with `new ForeachAwaitPublisher()`) and `Mediator(IServiceProvider, INotificationPublisher)` — both verified against current source and implemented. `AddMediatR` registers `INotificationPublisher` alongside `IMediator`; ordinary Microsoft.Extensions.DependencyInjection constructor selection (prefers the most-satisfiable-parameters constructor) then automatically picks the two-parameter overload — no custom Mediator-construction logic needed, matching how current MediatR itself achieves this. A `protected virtual PublishCore(...)` extensibility hook (verified against current source) is also implemented. Implemented in MED-020. |
-
-## Partial Compatibility
-
-| API | What differs |
-|---|---|
-| `MediatRServiceConfiguration` | See Configuration API Completeness — only `LicenseKey` remains (intentionally excluded, see below). `StreamBehaviorsToRegister`/`AddStreamBehavior`\*/`AddOpenStreamBehavior` (MED-019), `NotificationPublisher`/`NotificationPublisherType` (MED-020), and `AddOpenBehaviors`\*(plural)/`OpenBehavior` (MED-021) all implemented — see Fully Compatible Core. Everything else present matches exactly. |
-| `RegisterGenericHandlers` scope | Verified current MediatR applies this to every scanned family (request handlers, notification handlers, exception handlers/actions, pre/post processors, **and stream handlers** — re-confirmed in MED-019 — see Generic Handler Scope Audit). NEXGov.Mediator (MED-013, extended MED-019) applies it to `IRequestHandler<,>`/`IRequestHandler<>` only — a deliberate, documented narrowing, not a defect. Generic-family expansion for every other scanned family (notifications, exceptions, processors, and now stream handlers) remains a single, consolidated compatibility gap for a later, dedicated task — not expanded piecemeal per family. |
+| `RegisterGenericHandlers` scope | Verified current MediatR applies this to every scanned family through one shared `ConnectImplementationsToTypesClosing` mechanism: request handlers, notification handlers, exception handlers/actions, pre/post processors (gated additionally on `AutoRegisterRequestProcessors`, matching that flag's ordinary-scanning gate), and stream handlers. NEXGov.Mediator applied it to `IRequestHandler<,>`/`IRequestHandler<>` only in MED-013; **MED-022 generalized the same shared closure engine to every one of those families**, verified by dedicated per-family tests. One MED-022 improvement over current source itself, not merely a port of it: current source's own non-primary-argument derivation (an `IRequest<TResponse>` lookup on the closed request type) crashes or misbehaves for every family except `IRequestHandler<,>`; this implementation substitutes the same per-parameter bindings into every generic argument position instead, which is strictly more general and produces correct, working registrations for these families rather than reproducing current source's own crash — see the `AddMediatR(...)` row in `docs/COMPATIBILITY.md` for the full, verified explanation. |
 
 ## Not Implemented
 
-**No streaming items remain in this section.** As of MED-019, streaming is complete for: contracts (MED-017), runtime dispatch/pipeline composition (MED-018), and closed-handler/behavior DI registration — both automatic (`AddMediatR` scanning) and explicit (`AddStreamBehavior`/`AddOpenStreamBehavior`) (MED-019). The only remaining streaming-adjacent gap — open-generic stream-handler expansion under `RegisterGenericHandlers` — is folded into the pre-existing, broader "generic-family expansion beyond request handlers" gap above (Partial Compatibility, `RegisterGenericHandlers` scope row), not tracked as a separate streaming item.
+**No streaming items remain in this section.** As of MED-019, streaming is complete for: contracts (MED-017), runtime dispatch/pipeline composition (MED-018), and closed-handler/behavior DI registration — both automatic (`AddMediatR` scanning) and explicit (`AddStreamBehavior`/`AddOpenStreamBehavior`) (MED-019); as of MED-022, so is open-generic stream-handler expansion under `RegisterGenericHandlers` — see Fully Compatible Core.
+
+**No generic-family-expansion item remains in this section either.** As of MED-022, `RegisterGenericHandlers` spans every family current source itself drives through its shared closing algorithm — see the `RegisterGenericHandlers` scope row in Fully Compatible Core.
+
+| API / Feature | Current MediatR shape | Practical importance |
+|---|---|---|
+| Unconditional open-to-open generic registration for `INotificationHandler<>`/`IRequestExceptionHandler<,,>`/`IRequestExceptionAction<,>`/pre-post-processors | **Newly discovered during MED-022's re-audit.** A second, entirely separate mechanism in current source (`AddMediatRClasses`'s `multiOpenInterfaces` loop) registers a matching open-generic implementation of these families directly against its own open service interface — an "open-to-open" registration, analogous to `AddOpenBehavior` — whenever the implementation's own arity matches the interface's arity exactly. This is **not** gated by `RegisterGenericHandlers` at all; it runs unconditionally (pre/post processors still gated by `AutoRegisterRequestProcessors`). No NEXGov.Mediator equivalent exists. | Medium — a real, always-on current behavior distinct from `RegisterGenericHandlers`'s own scope, not covered by MED-022 (out of scope: not part of that flag's behavior). |
+| `AddOpenBehavior`'s nested-generic-response closing pass | **Newly discovered during MED-022's re-audit.** Current source's `AddRequiredServices` applies an additional, separate closing pass (`RegisterClosedBehaviorsFromAssemblies`) for any open behavior registered via `BehaviorsToRegister` whose `TResponse` is a nested generic (e.g. `Result<T>`), scanning assemblies for matching concrete request types and eagerly registering closed behavior descriptors — because Microsoft.Extensions.DependencyInjection's own generic closing cannot resolve that shape positionally. No NEXGov.Mediator equivalent exists; `AddOpenBehavior`/`AddOpenBehaviors` here rely solely on ordinary DI generic closing. | Medium — affects only open behaviors whose response type is itself a nested generic; the common `IPipelineBehavior<TRequest, TResponse>` shape (both parameters used directly) is unaffected and already works. |
+| Commercial licensing (`ILoggerFactory`/`MediatR.Licensing` requirement) | **Newly discovered during MED-022's re-audit.** Current source's `AddRequiredServices` now unconditionally registers `LicenseAccessor`/`LicenseValidator` factories that resolve `ILoggerFactory` from the container and throw `InvalidOperationException` if it is missing — meaning current MediatR's `AddMediatR` itself now requires `services.AddLogging()` to have been called first, regardless of `LicenseKey`. Not replicated, consistent with this project's long-standing `LicenseKey` exclusion (see Intentionally Excluded). | Low for this project's compatibility surface (deliberately excluded), but worth knowing: current MediatR's `AddMediatR` is not usable at all without `ILoggerFactory` registered, independent of any actual license validation. |
 
 **No notification publisher items remain in this section either.** As of MED-020, `INotificationPublisher`, `NotificationHandlerExecutor`, `ForeachAwaitPublisher`/`TaskWhenAllPublisher`, the second `Mediator` constructor, and `NotificationPublisher`/`NotificationPublisherType` are all implemented — see Fully Compatible Core.
 
 **No `AddOpenBehaviors`/`OpenBehavior` item remains in this section either.** As of MED-021, both overloads of `MediatRServiceConfiguration.AddOpenBehaviors` and the `OpenBehavior` type are implemented — see Fully Compatible Core.
 
-This section is now empty: after MED-021, the only functional gap against current MediatR is `RegisterGenericHandlers` scope (see Partial Compatibility above), and the only other differences are the intentionally excluded items below.
+The three rows above are the only items remaining in this section: all newly discovered during MED-022's own re-audit, none carried forward as unclosed prior work — every functional gap tracked by this audit before MED-022 (streaming, notification publishing, `AddOpenBehaviors`, generic-family expansion) is closed.
 
 ## Intentionally Excluded
 
@@ -216,11 +232,16 @@ Based on this audit, V1 should promise:
 > request/response dispatch (closed stream handlers and behaviors,
 > manually registered or discovered via assembly scanning),
 > Microsoft.Extensions.DependencyInjection registration (including
-> generic request-handler expansion), and void-request `Unit` typing.
+> generic handler/processor expansion across every family
+> `RegisterGenericHandlers` drives in current source), and void-request
+> `Unit` typing.
 
-V1 should **not** promise: generic-family expansion for
-notifications/exceptions/processors/stream handlers, or any
-commercial-license-adjacent API. This is not "100% of MediatR's public
+V1 should **not** promise: the unconditional open-to-open generic
+registration mechanism current source applies outside
+`RegisterGenericHandlers` for notification/exception/processor families,
+`AddOpenBehavior`'s nested-generic-response closing pass, or any
+commercial-license-adjacent API (including current source's
+`ILoggerFactory` requirement). This is not "100% of MediatR's public
 surface" — it is the subset this project has consistently, deliberately
 targeted and fully verified, sized to the CleanArchitecture-style usage
 pattern that motivated the project (see migration status above).
@@ -234,10 +255,11 @@ pattern that motivated the project (see migration status above).
   notification publisher abstraction, formerly the sole P1 item, is
   fully implemented and verified as of MED-020.
 - **P2 (edge/advanced compatibility):**
-  - Generic-family expansion beyond request handlers (notifications/exceptions/processors, **and now stream handlers as of MED-019's re-confirmation**) — real current behavior, narrow practical impact. The only P2 functional gap remaining after MED-021.
+  - Unconditional open-to-open generic registration for `INotificationHandler<>`/exception handlers/actions/pre-post-processors, independent of `RegisterGenericHandlers` — newly discovered during MED-022's re-audit; real current behavior, no NEXGov.Mediator equivalent.
+  - `AddOpenBehavior`'s nested-generic-response closing pass (`RegisterClosedBehaviorsFromAssemblies`) — newly discovered during MED-022's re-audit; real current behavior, narrow practical impact (only affects behaviors whose response is itself a nested generic).
   - Unstable `Array.Sort` tie-break in current MediatR's own `HandlersOrderer` vs. this project's deliberate stable-provider-order tie-break (MED-015) — see Exception Ordering Audit below; classified P2 rather than a defect, since the target itself specifies no stable semantic.
 - **P3 (intentionally excluded/non-goal):**
-  - `LicenseKey` (both locations) — commercial licensing subsystem.
+  - `LicenseKey` (both locations) and the `ILoggerFactory`/`MediatR.Licensing` dependency current source's `AddRequiredServices` now requires — commercial licensing subsystem.
   - Source generators, AOT-specific redesign.
 
 ## Remaining V1 Blockers
@@ -246,13 +268,16 @@ None identified. Every P0-classified gap from prior MED tasks is closed
 as of MED-015. The audit found no P0 gaps (see Gap Ranking above), and as
 of MED-020 there are no P1 gaps either — only P2/P3 items remain, none of
 which block the scope this project has consistently targeted (see
-"Recommended V1 Compatibility Promise"). Streaming (MED-019) and
-notification publishing (MED-020), the two former P1 gaps, are both
-fully closed.
+"Recommended V1 Compatibility Promise"). Streaming (MED-019), notification
+publishing (MED-020), `AddOpenBehaviors` (MED-021), and generic-family
+expansion (MED-022) — the four former P1/functional-P2 gaps — are all
+fully closed; the two P2 items remaining were only discovered during
+MED-022's own re-audit, not carried forward as unclosed prior work.
 
 ## Post-V1 / Optional Features
 
-- Generic-family expansion beyond request handlers (`RegisterGenericHandlers` for notifications/exceptions/processors, and stream handlers).
+- Unconditional open-to-open generic registration for notification/exception/processor families, independent of `RegisterGenericHandlers`.
+- `AddOpenBehavior`'s nested-generic-response closing pass.
 - Commercial licensing (permanently out of scope, not deferred).
 
 ## Recommended Next Tasks
@@ -265,6 +290,6 @@ full rationale; task list:
 - ~~**MED-019** — Streaming DI Registration (scanning, `AddStreamBehavior`/`AddOpenStreamBehavior`)~~ — done.
 - ~~**MED-020** — Notification Publisher Compatibility (`INotificationPublisher`, `ForeachAwaitPublisher`/`TaskWhenAllPublisher`, `NotificationHandlerExecutor`, `MediatRServiceConfiguration.NotificationPublisher`/`NotificationPublisherType`, second `Mediator` constructor)~~ — done.
 - ~~**MED-021** — `AddOpenBehaviors`/`OpenBehavior` Batch Registration Compatibility~~ — done.
-- **MED-022** — Generic Family Expansion (notification/exception/processor/**stream handler** `RegisterGenericHandlers` support) — the sole remaining functional (P2) compatibility gap.
+- ~~**MED-022** — Generic Family Expansion (notification/exception/processor/stream handler `RegisterGenericHandlers` support)~~ — done; also surfaced two new P2 gaps (unconditional open-to-open generic registration for notification/exception/processor families; `AddOpenBehavior`'s nested-generic-response closing pass), tracked above, not yet scheduled.
 - **MED-023** — Release Readiness (package version/authors/repository metadata, symbol packages)
 - **MED-024** — Final Compatibility Audit

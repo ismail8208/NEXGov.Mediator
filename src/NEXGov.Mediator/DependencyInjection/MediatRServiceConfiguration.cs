@@ -67,13 +67,18 @@ public class MediatRServiceConfiguration
     public bool AutoRegisterRequestProcessors { get; set; }
 
     /// <summary>
-    /// Gets or sets whether scanning should expand open-generic <see cref="IRequestHandler{TRequest, TResponse}"/>/
-    /// <see cref="IRequestHandler{TRequest}"/> implementations into closed registrations for every valid
-    /// combination of candidate types satisfying the handler's own generic constraints. Default value is
-    /// <see langword="false"/>. Implemented in MED-013 for request handlers only — notification handlers,
-    /// exception handlers/actions, and pre/post processors containing open generic type parameters remain
-    /// excluded from scanning regardless of this setting (a deliberate, documented scope narrowing from
-    /// current MediatR — see <c>docs/COMPATIBILITY.md</c>).
+    /// Gets or sets whether scanning should expand open-generic implementations into closed registrations
+    /// for every valid combination of candidate types satisfying the implementation's own generic
+    /// constraints. Default value is <see langword="false"/>. Implemented in MED-013 for
+    /// <see cref="IRequestHandler{TRequest, TResponse}"/>/<see cref="IRequestHandler{TRequest}"/> only;
+    /// generalized in MED-022 to every other family current MediatR's own generic-closing algorithm also
+    /// covers — <see cref="INotificationHandler{TNotification}"/>,
+    /// <see cref="NEXGov.Mediator.IStreamRequestHandler{TRequest, TResponse}"/>,
+    /// <see cref="IRequestExceptionHandler{TRequest, TResponse, TException}"/>,
+    /// <see cref="IRequestExceptionAction{TRequest, TException}"/>, and (only when
+    /// <see cref="AutoRegisterRequestProcessors"/> is also <see langword="true"/>)
+    /// <see cref="IRequestPreProcessor{TRequest}"/>/<see cref="IRequestPostProcessor{TRequest, TResponse}"/>
+    /// — see <c>docs/COMPATIBILITY.md</c> for the full family matrix and verified quirks.
     /// </summary>
     public bool RegisterGenericHandlers { get; set; }
 
@@ -82,7 +87,7 @@ public class MediatRServiceConfiguration
     /// declare when <see cref="RegisterGenericHandlers"/> is enabled. Default value is <c>10</c>, matching
     /// current MediatR. A value of <c>0</c> disables this check (verified against current source: the
     /// guard is <c>MaxGenericTypeParameters &gt; 0</c>); a negative value behaves the same as <c>0</c>
-    /// (the guard is never satisfied). Only affects generic request-handler registration.
+    /// (the guard is never satisfied). Only affects generic handler/processor registration (every RegisterGenericHandlers-participating family, not request handlers alone — see that property's doc).
     /// </summary>
     public int MaxGenericTypeParameters { get; set; } = 10;
 
@@ -90,7 +95,7 @@ public class MediatRServiceConfiguration
     /// Gets or sets the maximum number of candidate types allowed to close a single generic parameter of
     /// an open-generic request handler when <see cref="RegisterGenericHandlers"/> is enabled. Default
     /// value is <c>100</c>, matching current MediatR. A value of <c>0</c> disables this check; a negative
-    /// value behaves the same as <c>0</c>. Only affects generic request-handler registration.
+    /// value behaves the same as <c>0</c>. Only affects generic handler/processor registration (every RegisterGenericHandlers-participating family, not request handlers alone — see that property's doc).
     /// </summary>
     public int MaxTypesClosing { get; set; } = 100;
 
@@ -106,20 +111,21 @@ public class MediatRServiceConfiguration
     /// at a real positive value; conversely, setting only this property to <c>0</c> while
     /// <see cref="MaxGenericTypeParameters"/> remains at its default does <em>not</em> disable this check —
     /// it instead makes it fail for almost any non-empty combination (<c>totalCombinations &gt; 0</c>).
-    /// Only affects generic request-handler registration.
+    /// Only affects generic handler/processor registration (every RegisterGenericHandlers-participating family, not request handlers alone — see that property's doc).
     /// </summary>
     public int MaxGenericTypeRegistrations { get; set; } = 125000;
 
     /// <summary>
-    /// Gets or sets, in milliseconds, how long generic request-handler registration is allowed to run
-    /// before it is aborted. Default value is <c>15000</c>, matching current MediatR.
+    /// Gets or sets, in milliseconds, how long generic handler/processor registration — across every
+    /// <see cref="RegisterGenericHandlers"/>-participating family together, not per family — is allowed to
+    /// run before it is aborted. Default value is <c>15000</c>, matching current MediatR.
     /// <strong>Verified, not the documented-elsewhere assumption:</strong> a value of <c>0</c> does
     /// <em>not</em> disable the timeout — it is passed directly to a
     /// <see cref="System.Threading.CancellationTokenSource(int)"/>, whose documented contract treats
     /// <c>0</c> as an already-expired delay, so generic handler registration is cancelled immediately.
     /// Only <c>-1</c> (<see cref="System.Threading.Timeout.Infinite"/>) disables the timeout, per that same
-    /// contract. On expiry, a <see cref="TimeoutException"/> is thrown. Only affects generic request-handler
-    /// registration — ordinary (non-generic) scanning is not subject to this timeout.
+    /// contract. On expiry, a <see cref="TimeoutException"/> is thrown. Only affects generic
+    /// handler/processor registration — ordinary (non-generic) scanning is not subject to this timeout.
     /// </summary>
     public int RegistrationTimeout { get; set; } = 15000;
 

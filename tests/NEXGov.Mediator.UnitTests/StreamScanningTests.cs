@@ -253,32 +253,30 @@ public class StreamScanningTests
     // --- RegisterGenericHandlers interaction ---
 
     [Fact]
-    public void OpenGenericStreamHandler_IsNotScanned_EvenWhenRegisterGenericHandlersIsTrue()
+    public void OpenGenericStreamHandler_UnconstrainedTypeParameter_HitsTheSameGenericRegistrationLimits()
     {
-        // Deliberate MED-019 scope narrowing, consistent with MED-013's
-        // already-established policy for IRequestHandler<,>: generic
-        // stream-handler expansion is a documented gap for a later task,
-        // not implemented here.
+        // MED-022 closed the MED-019-documented gap: RegisterGenericHandlers now expands
+        // IStreamRequestHandler<,> too (verified against current source, which gates it
+        // through the same filter as every other family). GenericNumberStreamHandler<T> is
+        // deliberately left unconstrained (see StreamScanningFixtures.cs) so that, when NOT
+        // excluded via TypeEvaluator, it demonstrates the same MaxTypesClosing safety limit
+        // every other generic family already respects — proving stream-handler expansion goes
+        // through the identical, shared closure engine rather than a special-cased path. The
+        // positive, working acceptance path lives in GenericFamilyRegistrationTests (MED-022).
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
+
+        var exception = Assert.Throws<ArgumentException>(() => services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterGenericHandlers = true;
 
-            // RegisterGenericHandlers also drives GenericRequestHandlerRegistrar's
-            // unrelated IRequestHandler<,> expansion pass over the whole test
-            // assembly; exclude the other MED-013 test fixture it would
-            // otherwise try (and fail) to expand here, matching the same
-            // exclusion GenericHandlerRegistrationTests uses for the same reason.
+            // Exclude the unrelated MED-013 request-handler fixture that would otherwise
+            // also be swept up by the same whole-assembly scan, matching the same exclusion
+            // GenericHandlerRegistrationTests uses for the same reason.
             cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>);
-        });
+        }));
 
-        var hasGenericStreamHandlerRegistration = services.Any(sd =>
-            sd.ServiceType.IsGenericType
-            && sd.ServiceType.GetGenericTypeDefinition() == typeof(IStreamRequestHandler<,>)
-            && sd.ImplementationType is { IsGenericTypeDefinition: true });
-
-        Assert.False(hasGenericStreamHandlerRegistration);
+        Assert.Contains("GenericNumberStreamHandler", exception.Message, StringComparison.Ordinal);
     }
 
     // --- Assembly registration variants / deduplication ---

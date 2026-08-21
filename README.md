@@ -130,10 +130,9 @@ pair, and `StreamHandlerDelegate<TResponse>` (the stream pipeline's
 continuation type) deliberately carries no `CancellationToken` parameter
 of its own — see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for why.
 
-**Not yet supported:** open-generic stream handlers under
-`RegisterGenericHandlers` (see "Generic request handlers" below — the
-same scope narrowing applies to streams). See
-[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture.
+Open-generic stream handlers are also expanded under
+`RegisterGenericHandlers` — see "Generic handlers and processors" below.
+See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the full picture.
 
 ### Notification publishing strategy
 
@@ -164,11 +163,11 @@ default** for predictable ordering and safety with scoped dependencies;
 reach for `TaskWhenAllPublisher`/a custom strategy only when handlers are
 independent and concurrency is actually wanted.
 
-### Generic request handlers
+### Generic handlers and processors
 
 Off by default. Enable it to have scanning expand an open-generic
-`IRequestHandler<,>`/`IRequestHandler<>` implementation into one closed
-registration per candidate type satisfying its own generic constraints:
+implementation into one closed registration per candidate type satisfying
+its own generic constraints:
 
 ```csharp
 services.AddMediatR(cfg =>
@@ -184,9 +183,27 @@ public sealed class GetByIdHandler<TEntity> : IRequestHandler<GetById<TEntity>, 
 }
 ```
 
-See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the exact
+`RegisterGenericHandlers` expands every family current MediatR itself
+drives through the same shared closing algorithm — not request handlers
+alone: `IRequestHandler<,>`, `IRequestHandler<>`, `INotificationHandler<>`,
+`IStreamRequestHandler<,>`, `IRequestExceptionHandler<,,>`, and
+`IRequestExceptionAction<,>`, plus (only when `AutoRegisterRequestProcessors`
+is also `true`) `IRequestPreProcessor<>`/`IRequestPostProcessor<,>`. Enabling
+it against a large assembly can increase startup registration work —
+every open-generic implementation across every one of these families is
+evaluated against every other candidate type in the scanned assemblies —
+and that work is bounded by the same `MaxGenericTypeParameters`/
+`MaxTypesClosing`/`MaxGenericTypeRegistrations`/`RegistrationTimeout`
+limits regardless of which family is being expanded. See
+[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the exact
 constraint/limit/timeout semantics — several of them replicate genuinely
-surprising, verified current-MediatR behavior around zero-value limits.
+surprising, verified current-MediatR behavior around zero-value limits —
+and [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md) for two
+related, but distinct and still-open, compatibility gaps this flag does
+**not** cover: current MediatR's separate, unconditional (not
+`RegisterGenericHandlers`-gated) open-to-open registration for
+notification/exception/processor families, and `AddOpenBehavior`'s
+nested-generic-response closing pass.
 
 ## Compatibility goal
 
@@ -247,17 +264,20 @@ is used as a compatibility reference.
       `AddOpenBehavior`, `AddOpenBehaviors` (batch), `AddRequestPreProcessor`,
       `AddOpenRequestPreProcessor`, `AddRequestPostProcessor`,
       `AddOpenRequestPostProcessor`)
-- [x] Generic request-handler registration (`RegisterGenericHandlers`,
-      request handlers only — see `docs/COMPATIBILITY-AUDIT.md` for the
-      scope narrowing versus current MediatR)
+- [x] Generic handler/processor registration (`RegisterGenericHandlers`,
+      implemented for request handlers only in MED-013, generalized in
+      MED-022 to every family current MediatR itself drives through the
+      same shared closing algorithm — notification handlers, stream
+      handlers, exception handlers/actions, and pre/post processors — see
+      `docs/COMPATIBILITY-AUDIT.md` for the two newly discovered,
+      still-open, unrelated gaps this does not cover)
 - [x] Void-request `Unit` typing and current handler-proximity exception
       ordering
 - [x] Streaming requests (`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,
       `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`, `CreateStream(...)`
       runtime, and `AddMediatR` scanning/`AddStreamBehavior`/`AddOpenStreamBehavior`
-      registration for closed stream handlers — generic stream-handler
-      expansion under `RegisterGenericHandlers` remains a documented gap,
-      see `docs/COMPATIBILITY-AUDIT.md`)
+      registration for closed stream handlers, plus generic stream-handler
+      expansion under `RegisterGenericHandlers` as of MED-022)
 - [x] Pluggable notification publishing (`INotificationPublisher`,
       `NotificationHandlerExecutor`, `ForeachAwaitPublisher` (default,
       sequential), `TaskWhenAllPublisher` (concurrent),

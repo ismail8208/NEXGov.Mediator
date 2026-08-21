@@ -155,21 +155,29 @@ internal sealed class FilteredOutStreamHandler : IStreamRequestHandler<FilteredO
     }
 }
 
-// --- Open-generic stream handler: verifies MED-019's deliberate scope
-// narrowing (consistent with MED-013's already-established policy for
-// IRequestHandler<,>) — RegisterGenericHandlers does NOT expand
-// IStreamRequestHandler<,> scanning here, unlike current MediatR's own
-// behavior (verified: current MediatR gates IStreamRequestHandler<,>
-// scanning through the same RegisterGenericHandlers-controlled filter it
-// uses for every other scanned family). Generic stream-handler expansion
-// remains a documented gap for a later, dedicated task. ---
+// --- Open-generic stream handler, deliberately UNCONSTRAINED. MED-013/MED-019
+// originally used this fixture to prove RegisterGenericHandlers did NOT expand
+// IStreamRequestHandler<,>. MED-022 closed that gap — current MediatR gates
+// IStreamRequestHandler<,> scanning through the same RegisterGenericHandlers
+// filter as every other family (verified against current source), so this
+// project now does too. This fixture is kept deliberately unconstrained (and
+// excluded via TypeEvaluator everywhere else in this file/GenericHandlerRegistrationTests.cs)
+// so it can instead demonstrate that an unconstrained open-generic stream
+// handler legitimately trips the same MaxTypesClosing safety limit every
+// other family already respects — see
+// OpenGenericStreamHandler_UnconstrainedTypeParameter_HitsTheSameGenericRegistrationLimits.
+// The positive, working acceptance path for generic stream-handler expansion
+// (two closed stream request types, CreateStream/dynamic CreateStream, stream
+// behavior composition, cancellation, scoped lifetime) lives in
+// GenericFamilyRegistrationFixtures.cs/GenericFamilyRegistrationTests.cs
+// (MED-022), using properly constrained fixtures. ---
 
 internal sealed record GenericNumberStream<T> : IStreamRequest<T>;
 
 internal sealed class GenericNumberStreamHandler<T> : IStreamRequestHandler<GenericNumberStream<T>, T>
 {
     public IAsyncEnumerable<T> Handle(GenericNumberStream<T> request, CancellationToken cancellationToken)
-        => throw new InvalidOperationException("should never be resolved: open-generic stream handlers are not scanned");
+        => throw new InvalidOperationException("should never be resolved: excluded via TypeEvaluator in every test except its own limit-exceeded proof");
 }
 
 // --- Scoped-dependency stream handler, for automatic-discovery scoped

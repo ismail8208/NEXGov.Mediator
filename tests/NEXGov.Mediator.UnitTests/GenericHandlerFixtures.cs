@@ -239,22 +239,25 @@ internal sealed class FixedPingHandler : IRequestHandler<FixedPing, FixedPong>
 // T appears nowhere in the interface — current source reaches
 // Type.GetGenericTypeDefinition() on the non-generic FixedPing and throws;
 // this implementation recognizes the shape and skips it instead (see
-// GenericRequestHandlerRegistrar remarks).
+// GenericHandlerRegistrar remarks).
 internal sealed class UnusedParameterHandler<T> : IRequestHandler<FixedPing, FixedPong>
 {
     public Task<FixedPong> Handle(FixedPing request, CancellationToken cancellationToken)
         => Task.FromResult(new FixedPong("from-generic"));
 }
 
-// --- Item 16: partially closed generic base types ---
+// --- Item 16 (MED-013) / item 10 (MED-022): partially closed generic base types ---
 
 // PartiallyClosedBaseHandler fixes TCategory = MarkerA1, leaving TEntity as
 // the only generic parameter MarkerACategoryHandler<TEntity> itself declares.
-// Verified (see PartiallyClosedGenericBase_DoesNotClose_... test): this
-// shape never actually produces a registration — the algorithm closes the
-// 2-arity request type positionally from the handler's own (1-arity)
-// GetGenericArguments(), so a handler that fixes away one of the request's
-// own type arguments in its base class can never supply enough arguments.
+// MED-013's original position-0-plus-arity-matching algorithm could never
+// close this shape (the request type definition's own arity, 2, never
+// matched the handler's own 1-arity GetGenericArguments() used positionally
+// to fill it). MED-022's substitution-based engine closes it correctly
+// instead — it substitutes the handler's own TEntity binding wherever it
+// appears in the found interface instantiation (IRequestHandler<GetByCategory<TEntity, MarkerA1>, EntityDto<TEntity>>),
+// leaving the already-closed MarkerA1 untouched — see
+// PartiallyClosedGenericBase_ClosesCorrectly_UsingTheHandlersOwnRemainingTypeParameter.
 internal abstract class PartiallyClosedBaseHandler<TEntity, TCategory> : IRequestHandler<GetByCategory<TEntity, TCategory>, EntityDto<TEntity>>
     where TEntity : IGenericFixtureCategorized<TCategory>
     where TCategory : IGenericFixtureMarkerA

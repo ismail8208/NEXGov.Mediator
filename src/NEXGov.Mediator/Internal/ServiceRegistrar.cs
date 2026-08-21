@@ -59,11 +59,12 @@ internal static class ServiceRegistrar
         // gap for a later, dedicated task, not silently expanded here.
         AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IStreamRequestHandler<,>), services, candidateTypes, addIfAlreadyExists: false);
 
-        // Open-generic request handler expansion (MED-013) is a separate, additional
+        // Open-generic handler/processor expansion (MED-013 request handlers only;
+        // generalized to every participating family in MED-022) is a separate, additional
         // pass over a disjoint candidate set (types that still contain generic
         // parameters, which the scanning above always excludes) — see
-        // GenericRequestHandlerRegistrar for the algorithm and its verified quirks.
-        GenericRequestHandlerRegistrar.Register(services, configuration, assembliesToScan);
+        // GenericHandlerRegistrar for the algorithm and its verified quirks.
+        GenericHandlerRegistrar.Register(services, configuration, assembliesToScan);
     }
 
     public static void AddRequiredServices(IServiceCollection services, MediatRServiceConfiguration configuration)

@@ -501,50 +501,92 @@ Introduced in MED-011 alongside `MediatRServiceConfiguration.AddBehavior`/`AddOp
   order; there is no separate storage mechanism and no runtime behavior
   distinct from the one-at-a-time API above.
 
-## Generic request-handler registration principles
+## Generic handler/processor registration principles
 
-Introduced in MED-013, via the internal `GenericRequestHandlerRegistrar`,
-called once from `ServiceRegistrar.AddMediatRClasses` after ordinary
-scanning, gated on `MediatRServiceConfiguration.RegisterGenericHandlers`.
+Introduced in MED-013 for request handlers only, via the internal
+`GenericRequestHandlerRegistrar`; generalized in MED-022 to every family
+current source's own shared closing algorithm drives, via the renamed
+internal `GenericHandlerRegistrar`. Called once from
+`ServiceRegistrar.AddMediatRClasses` after ordinary scanning, gated on
+`MediatRServiceConfiguration.RegisterGenericHandlers`.
 
-- **Opt-in, request handlers only.** Disabled by default; when enabled,
-  expands only open-generic `IRequestHandler<,>`/`IRequestHandler<>`
-  implementations. Notification handlers, exception handlers/actions, and
-  pre/post processors containing open generic parameters remain excluded
-  from scanning regardless of this setting — a deliberate scope narrowing
-  from current MediatR's own broader behavior (see `docs/COMPATIBILITY.md`).
+- **Opt-in, but spans every participating family — not request handlers
+  alone.** Disabled by default; when enabled, expands open-generic
+  `IRequestHandler<,>`, `IRequestHandler<>`, `INotificationHandler<>`,
+  `IStreamRequestHandler<,>`, `IRequestExceptionHandler<,,>`, and
+  `IRequestExceptionAction<,>` implementations, plus (only when
+  `AutoRegisterRequestProcessors` is also `true`)
+  `IRequestPreProcessor<>`/`IRequestPostProcessor<,>` — MED-013's original
+  "request handlers only" scope was a re-verified-and-closed gap, not a
+  permanent design choice (see `docs/COMPATIBILITY.md`).
 - **Expansion happens during registration, not runtime dispatch.** Like
-  `AssemblyScanner`, `GenericRequestHandlerRegistrar` reads only `Type`
+  `AssemblyScanner`, `GenericHandlerRegistrar` reads only `Type`
   metadata — no handler is ever instantiated and no `IServiceProvider` is
   touched; every closed registration it produces is dispatched afterward by
-  the same MED-005–009 pipeline machinery as any other handler, which
-  remains completely unaware of how a handler was registered.
+  the same ordinary pipeline machinery as any other handler for its family,
+  which remains completely unaware of how a registration was produced.
+- **One shared closure engine, not one per family.** Candidate discovery,
+  constraint satisfaction, and the combination-limit machinery are
+  identical regardless of which family is being expanded; only the closed
+  interface each family implements differs. A single candidate combination
+  is closed by substituting its bound concrete types into every generic
+  argument position of the specific interface instantiation the candidate
+  implements — not only its primary (request/notification) position —
+  which is what lets the same engine correctly handle families whose
+  non-primary position (response, exception type) isn't derivable from the
+  primary type alone, unlike current source's own narrower, request/response-
+  specific derivation (see `docs/COMPATIBILITY.md` for the verified
+  crash/misbehavior this avoids in current source for those families).
 - **Only valid closed pairs are registered.** A combination is included
   only when every candidate independently satisfies the corresponding
-  generic parameter's full constraint set (base type/interface constraints
-  via `Type.GetGenericParameterConstraints()` plus the CLR special
-  constraints `class`/`struct`/`new()` read from
+  implementation type parameter's full constraint set (base type/interface
+  constraints via `Type.GetGenericParameterConstraints()` plus the CLR
+  special constraints `class`/`struct`/`new()` read from
   `GenericParameterAttributes`); combinations that would fail regardless
-  (an unused handler type parameter, a base class that only partially
-  closes a multi-argument request type) are skipped rather than producing
-  an invalid or crash-prone registration.
-- **Safety limits protect startup from combinatorial explosion.**
-  `MaxGenericTypeParameters`, `MaxTypesClosing`, and
-  `MaxGenericTypeRegistrations` bound, respectively, how many generic
-  parameters a handler may declare, how many candidates may close a single
-  parameter, and how many total closed registrations one handler may
-  produce; `RegistrationTimeout` bounds how long the whole expansion may
-  run. All four faithfully replicate current source's exact verified
+  (an unused type parameter, an interdependent constraint referencing a
+  sibling parameter) are skipped rather than producing an invalid or
+  crash-prone registration.
+- **Safety limits protect startup from combinatorial explosion, evaluated
+  per candidate/interface pairing.** `MaxGenericTypeParameters`,
+  `MaxTypesClosing`, and `MaxGenericTypeRegistrations` bound, respectively,
+  how many generic parameters an implementation may declare, how many
+  candidates may close a single parameter, and how many total closed
+  registrations one implementation may produce — evaluated independently
+  for each (candidate, interface) pairing, not as one running total across
+  a family or across the whole registration phase; one shared
+  `RegistrationTimeout` bounds the whole expansion, across every family
+  together. All four faithfully replicate current source's exact verified
   semantics, including its non-obvious zero-value quirks — see
   `docs/COMPATIBILITY.md` for the precise behavior of each.
-- **Generated handler instances remain DI-owned.** Every closed
-  registration is an ordinary `services.AddTransient(serviceType,
-  implementationType)` call; resolution, scoping, and disposal are no
-  different from a manually-registered or ordinarily-scanned handler.
-- **Generic registration does not change `Send` runtime architecture.**
-  `Mediator`/`RequestHandlerWrapper` resolve `IRequestHandler<,>`/`IRequestHandler<>`
-  exactly as before MED-013 — a generated closed registration is
-  indistinguishable, at dispatch time, from one written by hand.
+- **Generated registrations remain DI-owned, and duplicate semantics stay
+  family-agnostic.** Every closed registration is an ordinary
+  `services.AddTransient(serviceType, implementationType)` call —
+  never `TryAddTransient`/`TryAddEnumerable`, regardless of family, even
+  where that family's own ordinary (non-generic) scanning uses one of
+  those; resolution, scoping, and disposal are no different from a
+  manually-registered or ordinarily-scanned implementation.
+- **Generic registration does not change any family's runtime
+  architecture.** Every family's own dispatch/composition machinery
+  resolves its interfaces exactly as it did before MED-022 — a generated
+  closed registration is indistinguishable, at dispatch time, from one
+  written by hand, for every family, not only request handlers.
+- **Candidate discovery stays assembly-bounded.** Both the implementation
+  candidates themselves and the types later used to close their generic
+  parameters are scanned only from `MediatRServiceConfiguration.AssembliesToRegister`
+  — never `AppDomain.CurrentDomain.GetAssemblies()` — for every family,
+  unchanged from MED-013.
+- **A second, unconditional mechanism in current source is a different
+  feature, not part of this one, and remains unimplemented.** Current
+  MediatR also registers a matching open-generic
+  `INotificationHandler<>`/exception handler/action/pre-post-processor
+  implementation directly against its own open service interface (an
+  "open-to-open" registration current source's `AddMediatRClasses` always
+  performs, independent of `RegisterGenericHandlers`) — architecturally
+  unrelated to the closure engine described above, since it never
+  enumerates closing candidates or produces eagerly-closed registrations
+  at all; it simply hands the still-open implementation to
+  Microsoft.Extensions.DependencyInjection's own native generic closing.
+  MED-022 did not implement this — see `docs/COMPATIBILITY-AUDIT.md`.
 
 ## Streaming contract principles
 

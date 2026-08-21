@@ -17,12 +17,16 @@ public class GenericHandlerRegistrationTests
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
-            // OpenGenericHandler<T> (InheritedDiscoveryFixtures.cs, MED-012) is
-            // deliberately unconstrained to test that open-generic implementations stay
-            // deferred by default; with RegisterGenericHandlers enabled it would otherwise
-            // become a candidate with an enormous, unbounded closing-candidate pool (every
-            // class in this shared test assembly), unrelated to anything under test here.
-            cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>);
+            // OpenGenericHandler<T> (InheritedDiscoveryFixtures.cs, MED-012) and
+            // GenericNumberStreamHandler<T> (StreamScanningFixtures.cs, MED-019/MED-022) are
+            // both deliberately unconstrained fixtures used by other test files; with
+            // RegisterGenericHandlers enabled here (for the unrelated IRequestHandler<,>
+            // scenarios this file tests) they would otherwise become candidates with an
+            // enormous, unbounded closing-candidate pool (every class in this shared test
+            // assembly), unrelated to anything under test here — now that MED-022 also
+            // expands IStreamRequestHandler<,>, GenericNumberStreamHandler<T> participates
+            // in generic closing too and must be excluded the same way.
+            cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>) && type != typeof(GenericNumberStreamHandler<>);
             configure?.Invoke(cfg);
         });
         return services;
@@ -317,7 +321,7 @@ public class GenericHandlerRegistrationTests
         var services = BuildServices(cfg =>
         {
             cfg.RegisterGenericHandlers = true;
-            cfg.TypeEvaluator = type => type != typeof(GetByIdForEvaluatorHandler<>) && type != typeof(OpenGenericHandler<>);
+            cfg.TypeEvaluator = type => type != typeof(GetByIdForEvaluatorHandler<>) && type != typeof(OpenGenericHandler<>) && type != typeof(GenericNumberStreamHandler<>);
         });
 
         Assert.DoesNotContain(services, sd => sd.ServiceType == typeof(IRequestHandler<GetByIdForEvaluator<GenericFixtureCustomer>, EntityDto<GenericFixtureCustomer>>));
@@ -333,7 +337,7 @@ public class GenericHandlerRegistrationTests
         var services = BuildServices(cfg =>
         {
             cfg.RegisterGenericHandlers = true;
-            cfg.TypeEvaluator = type => type != typeof(GenericFixtureSupplier) && type != typeof(OpenGenericHandler<>);
+            cfg.TypeEvaluator = type => type != typeof(GenericFixtureSupplier) && type != typeof(OpenGenericHandler<>) && type != typeof(GenericNumberStreamHandler<>);
         });
 
         Assert.Contains(services, sd => sd.ServiceType == typeof(IRequestHandler<GetById<GenericFixtureSupplier>, EntityDto<GenericFixtureSupplier>>));
@@ -377,26 +381,29 @@ public class GenericHandlerRegistrationTests
         Assert.DoesNotContain(services, sd => sd.ImplementationType is { IsGenericType: true } t && t.GetGenericTypeDefinition() == typeof(UnusedParameterHandler<>));
     }
 
-    // --- Item 16: partially closed generic base types ---
+    // --- Item 16 (MED-013) / item 10 (MED-022): partially closed generic base types ---
 
     [Fact]
-    public void PartiallyClosedGenericBase_DoesNotClose_ArityMismatchBetweenHandlerAndRequest()
+    public async Task PartiallyClosedGenericBase_ClosesCorrectly_UsingTheHandlersOwnRemainingTypeParameter()
     {
-        // Verified via faithful reimplementation of current source's own algorithm (not
-        // assumed): the combination search is built from the DECLARING handler's own
-        // GetGenericArguments() — for MarkerACategoryHandler<TEntity>, just [TEntity], arity
-        // 1 — then applied positionally to close the REQUEST type definition
-        // (GetByCategory<,>, arity 2). A handler that only re-declares SOME of its base's
-        // request type arguments (TCategory was fixed to MarkerA1 by the base class, leaving
-        // only TEntity open) therefore has fewer generic arguments than the request type
-        // needs, and MakeGenericType fails on that arity mismatch for every combination.
-        // Current source has no guard here and would throw uncaught; this implementation's
-        // documented, deliberate safety deviation (see GenericRequestHandlerRegistrar
-        // remarks) catches it and skips instead, so the net effect for this shape is "no
-        // registration is generated" either way — never dispatchable, never a crash here.
+        // MED-022's substitution-based closure engine (unlike MED-013's original
+        // position-0-plus-arity-matching algorithm) substitutes the handler's own binding
+        // into every generic argument position of the found interface instantiation
+        // (IRequestHandler<GetByCategory<TEntity, MarkerA1>, EntityDto<TEntity>>), so a
+        // handler whose base class already fixed one of the request's own type arguments
+        // (TCategory = MarkerA1) closes correctly using only its own remaining parameter
+        // (TEntity) — see GenericHandlerFixtures.cs for the full shape.
         var services = BuildServices(cfg => cfg.RegisterGenericHandlers = true);
 
-        Assert.DoesNotContain(services, sd => sd.ServiceType == typeof(IRequestHandler<GetByCategory<GenericFixtureBranch, MarkerA1>, EntityDto<GenericFixtureBranch>>));
+        Assert.Contains(services, sd => sd.ServiceType == typeof(IRequestHandler<GetByCategory<GenericFixtureBranch, MarkerA1>, EntityDto<GenericFixtureBranch>>)
+            && sd.ImplementationType == typeof(MarkerACategoryHandler<GenericFixtureBranch>));
+
+        using var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<ISender>();
+
+        var response = await sender.Send(new GetByCategory<GenericFixtureBranch, MarkerA1>(7));
+
+        Assert.Equal(7, response.Id);
     }
 
     // --- Item 17: generic inheritance (MED-012 x MED-013 composition) ---
@@ -444,7 +451,7 @@ public class GenericHandlerRegistrationTests
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterGenericHandlers = true;
-            cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>);
+            cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>) && type != typeof(GenericNumberStreamHandler<>);
         });
         using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
@@ -462,7 +469,7 @@ public class GenericHandlerRegistrationTests
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.RegisterGenericHandlers = true;
-            cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>);
+            cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>) && type != typeof(GenericNumberStreamHandler<>);
         });
         services.AddTransient<IRequestHandler<DuplicateGenericQuery<GenericFixtureCustomer>, EntityDto<GenericFixtureCustomer>>, ManualDuplicateGenericQueryHandler>();
         using var provider = services.BuildServiceProvider();

@@ -8,10 +8,10 @@ using NEXGov.Mediator.Pipeline;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Configures how <see cref="NEXMediatorServiceCollectionExtensions.AddNEXMediator(IServiceCollection, Action{MediatRServiceConfiguration})"/>
+/// Configures how <see cref="NEXMediatorServiceCollectionExtensions.AddNEXMediator(IServiceCollection, Action{NEXMediatorServiceConfiguration})"/>
 /// scans assemblies and registers services.
 /// </summary>
-public class MediatRServiceConfiguration
+public class NEXMediatorServiceConfiguration
 {
     /// <summary>
     /// Gets or sets an optional filter applied to every candidate type found while scanning. Default value returns <see langword="true"/> for every type.
@@ -165,7 +165,7 @@ public class MediatRServiceConfiguration
     /// </summary>
     /// <typeparam name="T">A type whose assembly should be scanned.</typeparam>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration RegisterServicesFromAssemblyContaining<T>()
+    public NEXMediatorServiceConfiguration RegisterServicesFromAssemblyContaining<T>()
         => RegisterServicesFromAssemblyContaining(typeof(T));
 
     /// <summary>
@@ -173,7 +173,7 @@ public class MediatRServiceConfiguration
     /// </summary>
     /// <param name="type">A type whose assembly should be scanned.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration RegisterServicesFromAssemblyContaining(Type type)
+    public NEXMediatorServiceConfiguration RegisterServicesFromAssemblyContaining(Type type)
         => RegisterServicesFromAssembly(type.Assembly);
 
     /// <summary>
@@ -181,7 +181,7 @@ public class MediatRServiceConfiguration
     /// </summary>
     /// <param name="assembly">The assembly to scan.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration RegisterServicesFromAssembly(Assembly assembly)
+    public NEXMediatorServiceConfiguration RegisterServicesFromAssembly(Assembly assembly)
     {
         AssembliesToRegister.Add(assembly);
 
@@ -193,7 +193,7 @@ public class MediatRServiceConfiguration
     /// </summary>
     /// <param name="assemblies">The assemblies to scan.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration RegisterServicesFromAssemblies(params Assembly[] assemblies)
+    public NEXMediatorServiceConfiguration RegisterServicesFromAssemblies(params Assembly[] assemblies)
     {
         AssembliesToRegister.AddRange(assemblies);
 
@@ -207,7 +207,7 @@ public class MediatRServiceConfiguration
     /// <typeparam name="TImplementationType">The closed behavior implementation type.</typeparam>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddBehavior<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddBehavior<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         => AddBehavior(typeof(TServiceType), typeof(TImplementationType), serviceLifetime);
 
     /// <summary>
@@ -216,7 +216,7 @@ public class MediatRServiceConfiguration
     /// <typeparam name="TImplementationType">The closed behavior implementation type.</typeparam>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddBehavior<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddBehavior<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         => AddBehavior(typeof(TImplementationType), serviceLifetime);
 
     /// <summary>
@@ -226,7 +226,7 @@ public class MediatRServiceConfiguration
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="implementationType"/> does not implement <see cref="IPipelineBehavior{TRequest, TResponse}"/>.</exception>
-    public MediatRServiceConfiguration AddBehavior(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddBehavior(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(implementationType);
 
@@ -252,7 +252,7 @@ public class MediatRServiceConfiguration
     /// <param name="implementationType">The closed behavior implementation type.</param>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddBehavior(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddBehavior(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
         ArgumentNullException.ThrowIfNull(implementationType);
@@ -270,7 +270,7 @@ public class MediatRServiceConfiguration
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="openBehaviorType"/> is not generic, or does not implement <see cref="IPipelineBehavior{TRequest, TResponse}"/>.</exception>
-    public MediatRServiceConfiguration AddOpenBehavior(Type openBehaviorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddOpenBehavior(Type openBehaviorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(openBehaviorType);
 
@@ -311,7 +311,7 @@ public class MediatRServiceConfiguration
     /// Not atomic: types processed before an invalid or null entry are added to
     /// <see cref="BehaviorsToRegister"/> before the exception propagates.
     /// </remarks>
-    public MediatRServiceConfiguration AddOpenBehaviors(IEnumerable<Type> openBehaviorTypes, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddOpenBehaviors(IEnumerable<Type> openBehaviorTypes, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(openBehaviorTypes);
 
@@ -339,7 +339,7 @@ public class MediatRServiceConfiguration
     /// <paramref name="openBehaviors"/> — it is dereferenced directly, so a null entry throws
     /// <see cref="NullReferenceException"/> rather than <see cref="ArgumentNullException"/>.
     /// </remarks>
-    public MediatRServiceConfiguration AddOpenBehaviors(IEnumerable<OpenBehavior> openBehaviors)
+    public NEXMediatorServiceConfiguration AddOpenBehaviors(IEnumerable<OpenBehavior> openBehaviors)
     {
         ArgumentNullException.ThrowIfNull(openBehaviors);
 
@@ -358,7 +358,7 @@ public class MediatRServiceConfiguration
     /// <typeparam name="TImplementationType">The closed stream behavior implementation type.</typeparam>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddStreamBehavior<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddStreamBehavior<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         => AddStreamBehavior(typeof(TServiceType), typeof(TImplementationType), serviceLifetime);
 
     /// <summary>
@@ -367,7 +367,7 @@ public class MediatRServiceConfiguration
     /// <typeparam name="TImplementationType">The closed stream behavior implementation type.</typeparam>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddStreamBehavior<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddStreamBehavior<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         => AddStreamBehavior(typeof(TImplementationType), serviceLifetime);
 
     /// <summary>
@@ -377,7 +377,7 @@ public class MediatRServiceConfiguration
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="implementationType"/> does not implement <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/>.</exception>
-    public MediatRServiceConfiguration AddStreamBehavior(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddStreamBehavior(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(implementationType);
 
@@ -403,7 +403,7 @@ public class MediatRServiceConfiguration
     /// <param name="implementationType">The closed stream behavior implementation type.</param>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddStreamBehavior(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddStreamBehavior(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
         ArgumentNullException.ThrowIfNull(implementationType);
@@ -421,7 +421,7 @@ public class MediatRServiceConfiguration
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="openBehaviorType"/> is not generic, or does not implement <see cref="IStreamPipelineBehavior{TRequest, TResponse}"/>.</exception>
-    public MediatRServiceConfiguration AddOpenStreamBehavior(Type openBehaviorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddOpenStreamBehavior(Type openBehaviorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(openBehaviorType);
 
@@ -455,7 +455,7 @@ public class MediatRServiceConfiguration
     /// <typeparam name="TImplementationType">The closed pre-processor implementation type.</typeparam>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddRequestPreProcessor<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddRequestPreProcessor<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         => AddRequestPreProcessor(typeof(TServiceType), typeof(TImplementationType), serviceLifetime);
 
     /// <summary>
@@ -465,7 +465,7 @@ public class MediatRServiceConfiguration
     /// <param name="implementationType">The closed pre-processor implementation type.</param>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddRequestPreProcessor(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddRequestPreProcessor(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
         ArgumentNullException.ThrowIfNull(implementationType);
@@ -481,7 +481,7 @@ public class MediatRServiceConfiguration
     /// <typeparam name="TImplementationType">The closed pre-processor implementation type.</typeparam>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddRequestPreProcessor<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddRequestPreProcessor<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         => AddRequestPreProcessor(typeof(TImplementationType), serviceLifetime);
 
     /// <summary>
@@ -491,7 +491,7 @@ public class MediatRServiceConfiguration
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="implementationType"/> does not implement <see cref="IRequestPreProcessor{TRequest}"/>.</exception>
-    public MediatRServiceConfiguration AddRequestPreProcessor(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddRequestPreProcessor(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(implementationType);
 
@@ -517,7 +517,7 @@ public class MediatRServiceConfiguration
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="openProcessorType"/> is not generic, or does not implement <see cref="IRequestPreProcessor{TRequest}"/>.</exception>
-    public MediatRServiceConfiguration AddOpenRequestPreProcessor(Type openProcessorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddOpenRequestPreProcessor(Type openProcessorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(openProcessorType);
 
@@ -551,7 +551,7 @@ public class MediatRServiceConfiguration
     /// <typeparam name="TImplementationType">The closed post-processor implementation type.</typeparam>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddRequestPostProcessor<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddRequestPostProcessor<TServiceType, TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         => AddRequestPostProcessor(typeof(TServiceType), typeof(TImplementationType), serviceLifetime);
 
     /// <summary>
@@ -561,7 +561,7 @@ public class MediatRServiceConfiguration
     /// <param name="implementationType">The closed post-processor implementation type.</param>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddRequestPostProcessor(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddRequestPostProcessor(Type serviceType, Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
         ArgumentNullException.ThrowIfNull(implementationType);
@@ -577,7 +577,7 @@ public class MediatRServiceConfiguration
     /// <typeparam name="TImplementationType">The closed post-processor implementation type.</typeparam>
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
-    public MediatRServiceConfiguration AddRequestPostProcessor<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddRequestPostProcessor<TImplementationType>(ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         => AddRequestPostProcessor(typeof(TImplementationType), serviceLifetime);
 
     /// <summary>
@@ -587,7 +587,7 @@ public class MediatRServiceConfiguration
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="implementationType"/> does not implement <see cref="IRequestPostProcessor{TRequest, TResponse}"/>.</exception>
-    public MediatRServiceConfiguration AddRequestPostProcessor(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddRequestPostProcessor(Type implementationType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(implementationType);
 
@@ -613,7 +613,7 @@ public class MediatRServiceConfiguration
     /// <param name="serviceLifetime">The service lifetime to register under. Default is <see cref="ServiceLifetime.Transient"/>.</param>
     /// <returns>This configuration instance, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="openProcessorType"/> is not generic, or does not implement <see cref="IRequestPostProcessor{TRequest, TResponse}"/>.</exception>
-    public MediatRServiceConfiguration AddOpenRequestPostProcessor(Type openProcessorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
+    public NEXMediatorServiceConfiguration AddOpenRequestPostProcessor(Type openProcessorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {
         ArgumentNullException.ThrowIfNull(openProcessorType);
 

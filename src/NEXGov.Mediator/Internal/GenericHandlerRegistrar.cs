@@ -7,7 +7,7 @@ namespace NEXGov.Mediator.Internal;
 /// <summary>
 /// Expands open-generic handler/processor implementations into closed registrations, one per valid
 /// combination of candidate types satisfying the implementation's own generic constraints. Runs only when
-/// <see cref="MediatRServiceConfiguration.RegisterGenericHandlers"/> is <see langword="true"/>; pure
+/// <see cref="NEXMediatorServiceConfiguration.RegisterGenericHandlers"/> is <see langword="true"/>; pure
 /// <see cref="Type"/>-metadata scanning, exactly like <see cref="AssemblyScanner"/> — no handler is ever
 /// instantiated and no <see cref="IServiceProvider"/> is touched here.
 /// </summary>
@@ -18,7 +18,7 @@ namespace NEXGov.Mediator.Internal;
 /// <see cref="IRequestHandler{TRequest}"/>, <see cref="INotificationHandler{TNotification}"/>,
 /// <see cref="IStreamRequestHandler{TRequest, TResponse}"/>, <see cref="IRequestExceptionHandler{TRequest, TResponse, TException}"/>,
 /// <see cref="IRequestExceptionAction{TRequest, TException}"/>, and (only when
-/// <see cref="MediatRServiceConfiguration.AutoRegisterRequestProcessors"/> is also <see langword="true"/>)
+/// <see cref="NEXMediatorServiceConfiguration.AutoRegisterRequestProcessors"/> is also <see langword="true"/>)
 /// <see cref="IRequestPreProcessor{TRequest}"/>/<see cref="IRequestPostProcessor{TRequest, TResponse}"/> —
 /// through one shared closing algorithm, gated by the same <c>RegisterGenericHandlers</c> flag and the same
 /// single registration-phase timeout; this implementation mirrors that structure (MED-022).
@@ -59,7 +59,7 @@ namespace NEXGov.Mediator.Internal;
 /// </remarks>
 internal static class GenericHandlerRegistrar
 {
-    public static void Register(IServiceCollection services, MediatRServiceConfiguration configuration, IReadOnlyCollection<Assembly> assembliesToScan)
+    public static void Register(IServiceCollection services, NEXMediatorServiceConfiguration configuration, IReadOnlyCollection<Assembly> assembliesToScan)
     {
         if (!configuration.RegisterGenericHandlers)
         {
@@ -99,7 +99,7 @@ internal static class GenericHandlerRegistrar
     private static void RegisterFamily(
         Type openHandlerInterface,
         IServiceCollection services,
-        MediatRServiceConfiguration configuration,
+        NEXMediatorServiceConfiguration configuration,
         IReadOnlyCollection<Assembly> assembliesToScan,
         CancellationToken cancellationToken)
     {
@@ -231,9 +231,9 @@ internal static class GenericHandlerRegistrar
 
     /// <summary>
     /// Cartesian product of <paramref name="candidatesPerParameter"/>, guarded by
-    /// <see cref="MediatRServiceConfiguration.MaxGenericTypeParameters"/>,
-    /// <see cref="MediatRServiceConfiguration.MaxTypesClosing"/>, and
-    /// <see cref="MediatRServiceConfiguration.MaxGenericTypeRegistrations"/> exactly as verified against
+    /// <see cref="NEXMediatorServiceConfiguration.MaxGenericTypeParameters"/>,
+    /// <see cref="NEXMediatorServiceConfiguration.MaxTypesClosing"/>, and
+    /// <see cref="NEXMediatorServiceConfiguration.MaxGenericTypeRegistrations"/> exactly as verified against
     /// current source, including the <c>MaxGenericTypeRegistrations</c> guard quirk documented on that
     /// property. Evaluated fresh per (candidate, closed-interface) pairing — verified against current
     /// source, which evaluates these limits per concretion/interface pairing too, not as a single running
@@ -242,7 +242,7 @@ internal static class GenericHandlerRegistrar
     private static List<Type[]> GenerateCombinations(
         Type context,
         List<List<Type>> candidatesPerParameter,
-        MediatRServiceConfiguration configuration,
+        NEXMediatorServiceConfiguration configuration,
         CancellationToken cancellationToken)
     {
         if (configuration.MaxGenericTypeParameters > 0 && candidatesPerParameter.Count > configuration.MaxGenericTypeParameters)

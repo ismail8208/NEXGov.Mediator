@@ -9,8 +9,8 @@ namespace NEXGov.Mediator.Internal;
 /// interface — <c>services.AddTransient(openService, openImplementation)</c> — letting
 /// Microsoft.Extensions.DependencyInjection's own native generic-service closing resolve it
 /// later, for whatever closed type is actually requested. Unconditional: runs regardless of
-/// <see cref="MediatRServiceConfiguration.RegisterGenericHandlers"/> (pre/post processors
-/// remain additionally gated on <see cref="MediatRServiceConfiguration.AutoRegisterRequestProcessors"/>,
+/// <see cref="NEXMediatorServiceConfiguration.RegisterGenericHandlers"/> (pre/post processors
+/// remain additionally gated on <see cref="NEXMediatorServiceConfiguration.AutoRegisterRequestProcessors"/>,
 /// exactly like their ordinary closed scanning already is).
 /// </summary>
 /// <remarks>
@@ -28,7 +28,7 @@ namespace NEXGov.Mediator.Internal;
 /// <see cref="INotificationHandler{TNotification}"/>,
 /// <see cref="IRequestExceptionHandler{TRequest, TResponse, TException}"/>,
 /// <see cref="IRequestExceptionAction{TRequest, TException}"/>, and (when
-/// <see cref="MediatRServiceConfiguration.AutoRegisterRequestProcessors"/> is also
+/// <see cref="NEXMediatorServiceConfiguration.AutoRegisterRequestProcessors"/> is also
 /// <see langword="true"/>) <see cref="IRequestPreProcessor{TRequest}"/>/
 /// <see cref="IRequestPostProcessor{TRequest, TResponse}"/>.
 /// </para>
@@ -53,7 +53,7 @@ namespace NEXGov.Mediator.Internal;
 /// </remarks>
 internal static class OpenGenericHandlerRegistrar
 {
-    public static void Register(IServiceCollection services, MediatRServiceConfiguration configuration, IReadOnlyCollection<Assembly> assembliesToScan)
+    public static void Register(IServiceCollection services, NEXMediatorServiceConfiguration configuration, IReadOnlyCollection<Assembly> assembliesToScan)
     {
         var openServiceInterfaces = new List<Type>
         {

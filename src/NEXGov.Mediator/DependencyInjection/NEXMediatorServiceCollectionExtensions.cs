@@ -18,12 +18,12 @@ public static class NEXMediatorServiceCollectionExtensions
     /// <returns>The same service collection, for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="services"/> or <paramref name="configuration"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">No assembly was configured to scan.</exception>
-    public static IServiceCollection AddNEXMediator(this IServiceCollection services, Action<MediatRServiceConfiguration> configuration)
+    public static IServiceCollection AddNEXMediator(this IServiceCollection services, Action<NEXMediatorServiceConfiguration> configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        var serviceConfiguration = new MediatRServiceConfiguration();
+        var serviceConfiguration = new NEXMediatorServiceConfiguration();
         configuration.Invoke(serviceConfiguration);
 
         return services.AddNEXMediator(serviceConfiguration);
@@ -37,7 +37,7 @@ public static class NEXMediatorServiceCollectionExtensions
     /// <returns>The same service collection, for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="services"/> or <paramref name="configuration"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">No assembly was configured to scan.</exception>
-    public static IServiceCollection AddNEXMediator(this IServiceCollection services, MediatRServiceConfiguration configuration)
+    public static IServiceCollection AddNEXMediator(this IServiceCollection services, NEXMediatorServiceConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);

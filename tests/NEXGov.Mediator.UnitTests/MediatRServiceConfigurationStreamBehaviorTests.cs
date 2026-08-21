@@ -14,7 +14,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddStreamBehavior_SingleGenericArg_RegistersDiscoveredClosedInterface_AsTransientByDefault()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddStreamBehavior<NumberStreamOnlyBehavior>();
 
@@ -27,7 +27,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddStreamBehavior_SingleGenericArg_UsesExplicitLifetime()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddStreamBehavior<NumberStreamOnlyBehavior>(ServiceLifetime.Scoped);
 
@@ -37,7 +37,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddStreamBehavior_TwoGenericArgs_RegistersTheGivenServiceType()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddStreamBehavior<IStreamPipelineBehavior<ScannedNumberStream, int>, NumberStreamOnlyBehavior>();
 
@@ -51,7 +51,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     {
         // Matches verified current MediatR source: this overload performs
         // no IStreamPipelineBehavior<,> compatibility check at all.
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddStreamBehavior(typeof(IStreamPipelineBehavior<ScannedNumberStream, int>), typeof(NotAStreamPipelineBehavior));
 
@@ -63,7 +63,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddStreamBehavior_SingleTypeOverload_ThrowsInvalidOperationException_WhenTypeDoesNotImplementIStreamPipelineBehavior()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var exception = Assert.Throws<InvalidOperationException>(() => configuration.AddStreamBehavior(typeof(NotAStreamPipelineBehavior)));
 
@@ -73,7 +73,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddStreamBehavior_ReturnsSameConfigurationInstance_ForChaining()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var result = configuration.AddStreamBehavior<NumberStreamOnlyBehavior>();
 
@@ -83,7 +83,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddStreamBehavior_PreservesRegistrationOrder_AlongsideAddOpenStreamBehavior()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddStreamBehavior<NumberStreamOnlyBehavior>();
         configuration.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>));
@@ -98,7 +98,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddOpenStreamBehavior_RegistersTheOpenServiceType()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>));
 
@@ -111,7 +111,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddOpenStreamBehavior_UsesExplicitLifetime()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>), ServiceLifetime.Singleton);
 
@@ -121,7 +121,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddOpenStreamBehavior_PreservesRegistrationOrder()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>));
         configuration.AddOpenStreamBehavior(typeof(DoublingStreamBehavior<,>));
@@ -138,7 +138,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
         // own verified behavior; TryAddEnumerable at consumption time
         // (ServiceRegistrar.AddRequiredServices) is what prevents an
         // actual duplicate service registration downstream.
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>));
         configuration.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<,>));
@@ -149,7 +149,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddOpenStreamBehavior_ThrowsInvalidOperationException_WhenTypeIsNotGeneric()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var exception = Assert.Throws<InvalidOperationException>(() => configuration.AddOpenStreamBehavior(typeof(NumberStreamOnlyBehavior)));
 
@@ -159,7 +159,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void AddOpenStreamBehavior_ThrowsInvalidOperationException_WhenOpenGenericDoesNotImplementIStreamPipelineBehavior()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var exception = Assert.Throws<InvalidOperationException>(() => configuration.AddOpenStreamBehavior(typeof(WrongOpenGenericStreamBehavior<>)));
 
@@ -174,7 +174,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
         // this is not rejected at AddOpenStreamBehavior call time — only
         // lazily, when Microsoft.Extensions.DependencyInjection itself
         // validates the mismatched descriptor while building the provider.
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenStreamBehavior(typeof(LoggingStreamBehavior<ScannedNumberStream, int>));
 
@@ -195,19 +195,19 @@ public class MediatRServiceConfigurationStreamBehaviorTests
 
     [Theory]
     [MemberData(nameof(TypeAcceptingMethods))]
-    public void StreamRegistrationMethods_ThrowArgumentNullException_ForNullType(Action<MediatRServiceConfiguration> callWithNullType)
+    public void StreamRegistrationMethods_ThrowArgumentNullException_ForNullType(Action<NEXMediatorServiceConfiguration> callWithNullType)
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<ArgumentNullException>(() => callWithNullType(configuration));
     }
 
     public static IEnumerable<object[]> TypeAcceptingMethods()
     {
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddStreamBehavior((Type)null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddStreamBehavior(typeof(IStreamPipelineBehavior<ScannedNumberStream, int>), null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddStreamBehavior(null!, typeof(NumberStreamOnlyBehavior)))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenStreamBehavior(null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddStreamBehavior((Type)null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddStreamBehavior(typeof(IStreamPipelineBehavior<ScannedNumberStream, int>), null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddStreamBehavior(null!, typeof(NumberStreamOnlyBehavior)))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddOpenStreamBehavior(null!))];
     }
 
     // --- StreamBehaviorsToRegister shape ---
@@ -215,7 +215,7 @@ public class MediatRServiceConfigurationStreamBehaviorTests
     [Fact]
     public void StreamBehaviorsToRegister_IsListOfServiceDescriptor_AndEmptyByDefault()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.IsType<List<ServiceDescriptor>>(configuration.StreamBehaviorsToRegister);
         Assert.Empty(configuration.StreamBehaviorsToRegister);

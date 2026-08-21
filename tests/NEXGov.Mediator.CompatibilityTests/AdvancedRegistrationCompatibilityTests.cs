@@ -14,7 +14,7 @@ public class AdvancedRegistrationCompatibilityTests
     private const BindingFlags DeclaredPublicInstance = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
     private static MethodInfo[] MethodsNamed(string name) =>
-        typeof(MediatRServiceConfiguration).GetMethods(DeclaredPublicInstance)
+        typeof(NEXMediatorServiceConfiguration).GetMethods(DeclaredPublicInstance)
             .Where(m => m.Name == name)
             .ToArray();
 
@@ -29,7 +29,7 @@ public class AdvancedRegistrationCompatibilityTests
     {
         var method = MethodsNamed("AddBehavior").Single(m => m.GetGenericArguments().Length == 2);
 
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
 
         var parameters = method.GetParameters();
         Assert.Single(parameters);
@@ -43,7 +43,7 @@ public class AdvancedRegistrationCompatibilityTests
     {
         var method = MethodsNamed("AddBehavior").Single(m => m.GetGenericArguments().Length == 1);
 
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
 
         var parameters = method.GetParameters();
         Assert.Single(parameters);
@@ -88,7 +88,7 @@ public class AdvancedRegistrationCompatibilityTests
         var method = Assert.Single(methods);
 
         Assert.False(method.IsGenericMethodDefinition);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
 
         var parameters = method.GetParameters();
         Assert.Equal(2, parameters.Length);
@@ -162,7 +162,7 @@ public class AdvancedRegistrationCompatibilityTests
         var method = MethodsNamed("AddOpenBehaviors")
             .Single(m => m.GetParameters()[0].ParameterType == typeof(IEnumerable<Type>));
 
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
 
         var parameters = method.GetParameters();
         Assert.Equal(2, parameters.Length);
@@ -180,7 +180,7 @@ public class AdvancedRegistrationCompatibilityTests
         var method = MethodsNamed("AddOpenBehaviors")
             .Single(m => m.GetParameters()[0].ParameterType == typeof(IEnumerable<OpenBehavior>));
 
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
 
         var parameters = method.GetParameters();
         Assert.Single(parameters);
@@ -201,7 +201,7 @@ public class AdvancedRegistrationCompatibilityTests
     {
         var method = MethodsNamed("AddStreamBehavior").Single(m => m.GetGenericArguments().Length == 2);
 
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
 
         var parameters = method.GetParameters();
         Assert.Single(parameters);
@@ -215,7 +215,7 @@ public class AdvancedRegistrationCompatibilityTests
     {
         var method = MethodsNamed("AddStreamBehavior").Single(m => m.GetGenericArguments().Length == 1);
 
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
 
         var parameters = method.GetParameters();
         Assert.Single(parameters);
@@ -260,7 +260,7 @@ public class AdvancedRegistrationCompatibilityTests
         var method = Assert.Single(methods);
 
         Assert.False(method.IsGenericMethodDefinition);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
 
         var parameters = method.GetParameters();
         Assert.Equal(2, parameters.Length);
@@ -275,7 +275,7 @@ public class AdvancedRegistrationCompatibilityTests
     [Fact]
     public void StreamBehaviorsToRegister_IsPublicListOfServiceDescriptor_ReadOnlyProperty()
     {
-        var property = typeof(MediatRServiceConfiguration).GetProperty("StreamBehaviorsToRegister")!;
+        var property = typeof(NEXMediatorServiceConfiguration).GetProperty("StreamBehaviorsToRegister")!;
 
         Assert.Equal(typeof(List<ServiceDescriptor>), property.PropertyType);
         Assert.True(property.CanRead);
@@ -299,7 +299,7 @@ public class AdvancedRegistrationCompatibilityTests
         var parameters = method.GetParameters();
         Assert.Equal("implementationType", parameters[0].Name);
         Assert.Equal(typeof(Type), parameters[0].ParameterType);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
     }
 
     [Fact]
@@ -311,7 +311,7 @@ public class AdvancedRegistrationCompatibilityTests
         Assert.Equal(2, parameters.Length);
         Assert.Equal("openProcessorType", parameters[0].Name);
         Assert.Equal(typeof(Type), parameters[0].ParameterType);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
     }
 
     [Fact]
@@ -323,7 +323,7 @@ public class AdvancedRegistrationCompatibilityTests
         var parameters = method.GetParameters();
         Assert.Equal("implementationType", parameters[0].Name);
         Assert.Equal(typeof(Type), parameters[0].ParameterType);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
     }
 
     [Fact]
@@ -335,13 +335,13 @@ public class AdvancedRegistrationCompatibilityTests
         Assert.Equal(2, parameters.Length);
         Assert.Equal("openProcessorType", parameters[0].Name);
         Assert.Equal(typeof(Type), parameters[0].ParameterType);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
     }
 
     [Fact]
     public void ConfigurationCollections_AreListOfServiceDescriptor()
     {
-        var type = typeof(MediatRServiceConfiguration);
+        var type = typeof(NEXMediatorServiceConfiguration);
 
         Assert.Equal(typeof(List<ServiceDescriptor>), type.GetProperty("BehaviorsToRegister")!.PropertyType);
         Assert.Equal(typeof(List<ServiceDescriptor>), type.GetProperty("RequestPreProcessorsToRegister")!.PropertyType);
@@ -351,7 +351,7 @@ public class AdvancedRegistrationCompatibilityTests
     [Fact]
     public void ConfigurationCollections_AreEmptyByDefault()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Empty(configuration.BehaviorsToRegister);
         Assert.Empty(configuration.RequestPreProcessorsToRegister);

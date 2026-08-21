@@ -7,12 +7,12 @@ namespace NEXGov.Mediator.Internal;
 /// <summary>
 /// Coordinates assembly scanning and core service registration for
 /// <c>AddMediatR</c>. Reads only <see cref="Type"/> metadata and
-/// <see cref="MediatRServiceConfiguration"/> — never touches an
+/// <see cref="NEXMediatorServiceConfiguration"/> — never touches an
 /// <see cref="IServiceProvider"/>, so it captures no runtime state.
 /// </summary>
 internal static class ServiceRegistrar
 {
-    public static void AddNEXMediatorClasses(IServiceCollection services, MediatRServiceConfiguration configuration)
+    public static void AddNEXMediatorClasses(IServiceCollection services, NEXMediatorServiceConfiguration configuration)
     {
         var assembliesToScan = configuration.AssembliesToRegister.Distinct().ToArray();
 
@@ -75,7 +75,7 @@ internal static class ServiceRegistrar
         OpenGenericHandlerRegistrar.Register(services, configuration, assembliesToScan);
     }
 
-    public static void AddRequiredServices(IServiceCollection services, MediatRServiceConfiguration configuration)
+    public static void AddRequiredServices(IServiceCollection services, NEXMediatorServiceConfiguration configuration)
     {
         // TryAdd so a consumer's own IMediator/ISender/IPublisher registration
         // (made before or after calling AddMediatR) is never overridden.

@@ -5,7 +5,7 @@ namespace NEXGov.Mediator.Entities;
 /// <summary>
 /// Pairs an open-generic <see cref="IPipelineBehavior{TRequest, TResponse}"/> implementation
 /// type with the <see cref="ServiceLifetime"/> to register it under, for use with
-/// <see cref="MediatRServiceConfiguration.AddOpenBehaviors(IEnumerable{OpenBehavior})"/>.
+/// <see cref="NEXMediatorServiceConfiguration.AddOpenBehaviors(IEnumerable{OpenBehavior})"/>.
 /// </summary>
 public class OpenBehavior
 {
@@ -23,8 +23,8 @@ public class OpenBehavior
     /// A non-generic type that implements a closed <see cref="IPipelineBehavior{TRequest, TResponse}"/>
     /// (e.g. a behavior targeting one specific request/response pair) is accepted here without error;
     /// the "must be generic" check happens later, when
-    /// <see cref="MediatRServiceConfiguration.AddOpenBehaviors(IEnumerable{OpenBehavior})"/> forwards
-    /// <see cref="OpenBehaviorType"/> to <see cref="MediatRServiceConfiguration.AddOpenBehavior"/>.
+    /// <see cref="NEXMediatorServiceConfiguration.AddOpenBehaviors(IEnumerable{OpenBehavior})"/> forwards
+    /// <see cref="OpenBehaviorType"/> to <see cref="NEXMediatorServiceConfiguration.AddOpenBehavior"/>.
     /// </remarks>
     public OpenBehavior(Type openBehaviorType, ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
     {

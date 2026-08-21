@@ -6,11 +6,11 @@ namespace NEXGov.Mediator.Internal;
 
 /// <summary>
 /// For an open-generic <see cref="IPipelineBehavior{TRequest, TResponse}"/> implementation
-/// registered via <see cref="MediatRServiceConfiguration.AddOpenBehavior"/> whose declared
+/// registered via <see cref="NEXMediatorServiceConfiguration.AddOpenBehavior"/> whose declared
 /// response position is itself a constructed generic type (e.g. <c>Result&lt;T&gt;</c>) — a
 /// shape Microsoft.Extensions.DependencyInjection's own native open-generic resolution cannot
 /// close correctly — generates the missing explicit closed registrations by scanning
-/// <see cref="MediatRServiceConfiguration.AssembliesToRegister"/> for concrete
+/// <see cref="NEXMediatorServiceConfiguration.AssembliesToRegister"/> for concrete
 /// <see cref="IRequest{TResponse}"/> implementations and structurally unifying the behavior's
 /// own declared interface shape against each one.
 /// </summary>
@@ -73,7 +73,7 @@ internal static class ClosedBehaviorRegistrar
 {
     /// <summary>
     /// Registers every entry in <paramref name="configuration"/>'s
-    /// <see cref="MediatRServiceConfiguration.BehaviorsToRegister"/> — exactly like the plain
+    /// <see cref="NEXMediatorServiceConfiguration.BehaviorsToRegister"/> — exactly like the plain
     /// <c>foreach (var descriptor in configuration.BehaviorsToRegister) services.TryAddEnumerable(descriptor);</c>
     /// loop this replaces — except that a descriptor with the nested-generic-response shape is not
     /// itself registered open (see type-level remarks for why); its generated closed registrations
@@ -85,7 +85,7 @@ internal static class ClosedBehaviorRegistrar
     /// only happens once, lazily, shared across every triggering entry in this one call — never
     /// per entry, never repeated across calls.
     /// </summary>
-    public static void RegisterAll(IServiceCollection services, MediatRServiceConfiguration configuration)
+    public static void RegisterAll(IServiceCollection services, NEXMediatorServiceConfiguration configuration)
     {
         List<(Type RequestType, Type ResponseType)>? requestResponsePairs = null;
 
@@ -116,7 +116,7 @@ internal static class ClosedBehaviorRegistrar
     /// verified precisely, not restricted to <see cref="Type.IsClass"/> either, unlike this
     /// project's own open-generic-implementation candidate filters elsewhere) and fully closed
     /// (no unresolved generic parameters); never filtered by
-    /// <see cref="MediatRServiceConfiguration.TypeEvaluator"/> — that property applies only to
+    /// <see cref="NEXMediatorServiceConfiguration.TypeEvaluator"/> — that property applies only to
     /// implementation types discovered by scanning, and neither the request types here nor the
     /// already-explicitly-registered behavior type are that.
     /// </summary>

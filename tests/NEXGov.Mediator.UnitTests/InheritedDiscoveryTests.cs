@@ -9,7 +9,7 @@ namespace NEXGov.Mediator.UnitTests;
 // well as directly-implemented ones, across every scanned family.
 public class InheritedDiscoveryTests
 {
-    private static IServiceCollection BuildScannedServices(Action<MediatRServiceConfiguration>? configure = null)
+    private static IServiceCollection BuildScannedServices(Action<NEXMediatorServiceConfiguration>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(new ScanningLog());

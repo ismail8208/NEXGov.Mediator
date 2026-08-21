@@ -24,7 +24,7 @@ public class OpenGenericRegistrationTests
         && type != typeof(GenericPreProcessor<>)
         && type != typeof(GenericPostProcessor<,>);
 
-    private static IServiceCollection BuildServices(List<string> log, Action<MediatRServiceConfiguration>? configure = null)
+    private static IServiceCollection BuildServices(List<string> log, Action<NEXMediatorServiceConfiguration>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(log);

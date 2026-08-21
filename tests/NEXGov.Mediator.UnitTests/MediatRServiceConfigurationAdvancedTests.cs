@@ -11,7 +11,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddBehavior_SingleGenericArg_RegistersDiscoveredClosedInterface_AsTransientByDefault()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddBehavior<PingOnlyBehavior>();
 
@@ -24,7 +24,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddBehavior_SingleGenericArg_UsesExplicitLifetime()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddBehavior<PingOnlyBehavior>(ServiceLifetime.Scoped);
 
@@ -34,7 +34,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddBehavior_TwoGenericArgs_RegistersTheGivenServiceType()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddBehavior<IPipelineBehavior<Ping, Pong>, PingOnlyBehavior>();
 
@@ -48,7 +48,7 @@ public class MediatRServiceConfigurationAdvancedTests
     {
         // Matches verified current MediatR source: this overload performs
         // no IPipelineBehavior<,> compatibility check at all.
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddBehavior(typeof(IPipelineBehavior<Ping, Pong>), typeof(NotAPipelineBehavior));
 
@@ -60,7 +60,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddBehavior_SingleTypeOverload_ThrowsInvalidOperationException_WhenTypeDoesNotImplementIPipelineBehavior()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var exception = Assert.Throws<InvalidOperationException>(() => configuration.AddBehavior(typeof(NotAPipelineBehavior)));
 
@@ -70,7 +70,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddBehavior_ReturnsSameConfigurationInstance_ForChaining()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var result = configuration.AddBehavior<PingOnlyBehavior>();
 
@@ -82,7 +82,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehavior_RegistersTheOpenServiceType()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehavior(typeof(LoggingBehavior<,>));
 
@@ -95,7 +95,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehavior_UsesExplicitLifetime()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehavior(typeof(LoggingBehavior<,>), ServiceLifetime.Singleton);
 
@@ -105,7 +105,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehavior_PreservesRegistrationOrder()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehavior(typeof(LoggingBehavior<,>));
         configuration.AddOpenBehavior(typeof(ValidationBehavior<,>));
@@ -119,7 +119,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehavior_ThrowsInvalidOperationException_WhenTypeIsNotGeneric()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var exception = Assert.Throws<InvalidOperationException>(() => configuration.AddOpenBehavior(typeof(PingOnlyBehavior)));
 
@@ -129,7 +129,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehavior_ThrowsInvalidOperationException_WhenOpenGenericDoesNotImplementIPipelineBehavior()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var exception = Assert.Throws<InvalidOperationException>(() => configuration.AddOpenBehavior(typeof(WrongOpenGeneric<>)));
 
@@ -149,7 +149,7 @@ public class MediatRServiceConfigurationAdvancedTests
         // itself rejects this combination with an ArgumentException, but
         // only lazily, when that service is actually resolved/the
         // provider validates it — not at AddOpenBehavior call time.
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehavior(typeof(LoggingBehavior<Ping, Pong>));
 
@@ -170,25 +170,25 @@ public class MediatRServiceConfigurationAdvancedTests
 
     [Theory]
     [MemberData(nameof(TypeAcceptingMethods))]
-    public void AdvancedRegistrationMethods_ThrowArgumentNullException_ForNullType(Action<MediatRServiceConfiguration> callWithNullType)
+    public void AdvancedRegistrationMethods_ThrowArgumentNullException_ForNullType(Action<NEXMediatorServiceConfiguration> callWithNullType)
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<ArgumentNullException>(() => callWithNullType(configuration));
     }
 
     public static IEnumerable<object[]> TypeAcceptingMethods()
     {
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddBehavior((Type)null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddBehavior(typeof(IPipelineBehavior<Ping, Pong>), null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddBehavior(null!, typeof(PingOnlyBehavior)))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenBehavior(null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddRequestPreProcessor((Type)null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenRequestPreProcessor(null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddRequestPostProcessor((Type)null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenRequestPostProcessor(null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenBehaviors((IEnumerable<Type>)null!))];
-        yield return [new Action<MediatRServiceConfiguration>(c => c.AddOpenBehaviors((IEnumerable<OpenBehavior>)null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddBehavior((Type)null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddBehavior(typeof(IPipelineBehavior<Ping, Pong>), null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddBehavior(null!, typeof(PingOnlyBehavior)))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddOpenBehavior(null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddRequestPreProcessor((Type)null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddOpenRequestPreProcessor(null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddRequestPostProcessor((Type)null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddOpenRequestPostProcessor(null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddOpenBehaviors((IEnumerable<Type>)null!))];
+        yield return [new Action<NEXMediatorServiceConfiguration>(c => c.AddOpenBehaviors((IEnumerable<OpenBehavior>)null!))];
     }
 
     // --- AddOpenBehaviors(IEnumerable<Type>, ServiceLifetime) ---
@@ -196,7 +196,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_TypeCollection_RegistersEachInOrder_UnderTheSameLifetime()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehaviors(
             [typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>), typeof(PerformanceBehavior<,>)],
@@ -211,10 +211,10 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_TypeCollection_IsEquivalentToCallingAddOpenBehaviorPerType()
     {
-        var viaBatch = new MediatRServiceConfiguration();
+        var viaBatch = new NEXMediatorServiceConfiguration();
         viaBatch.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(ValidationBehavior<,>)]);
 
-        var viaIndividual = new MediatRServiceConfiguration();
+        var viaIndividual = new NEXMediatorServiceConfiguration();
         viaIndividual.AddOpenBehavior(typeof(LoggingBehavior<,>));
         viaIndividual.AddOpenBehavior(typeof(ValidationBehavior<,>));
 
@@ -226,7 +226,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_TypeCollection_EmptyCollection_RegistersNothing()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehaviors([]);
 
@@ -236,7 +236,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_TypeCollection_ThrowsInvalidOperationException_WhenAnElementIsNotGeneric()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<InvalidOperationException>(() =>
             configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(PingOnlyBehavior)]));
@@ -245,7 +245,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_TypeCollection_ThrowsArgumentNullException_WhenAnElementIsNull()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<ArgumentNullException>(() =>
             configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>), null!]));
@@ -254,7 +254,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_TypeCollection_NotAtomic_EarlierValidEntriesRemainRegisteredAfterFailure()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<InvalidOperationException>(() =>
             configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(PingOnlyBehavior), typeof(ValidationBehavior<,>)]));
@@ -268,7 +268,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_TypeCollection_ReturnsSameConfigurationInstance_ForChaining()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var result = configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
 
@@ -280,7 +280,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_OpenBehaviorCollection_RegistersEachInOrder_UnderItsOwnLifetime()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehaviors(
         [
@@ -301,7 +301,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_OpenBehaviorCollection_EmptyCollection_RegistersNothing()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehaviors(Array.Empty<OpenBehavior>());
 
@@ -314,7 +314,7 @@ public class MediatRServiceConfigurationAdvancedTests
         // Verified quirk (see OpenBehaviorTests and MediatRServiceConfiguration.AddOpenBehaviors
         // XML docs): a null OpenBehavior element is dereferenced directly, with no defensive
         // null check, matching current MediatR source exactly.
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<NullReferenceException>(() =>
             configuration.AddOpenBehaviors([new OpenBehavior(typeof(LoggingBehavior<,>)), null!]));
@@ -328,7 +328,7 @@ public class MediatRServiceConfigurationAdvancedTests
         // AddOpenBehaviors is where the "must be generic" check finally applies, via the
         // delegated AddOpenBehavior call.
         var nonGenericOpenBehavior = new OpenBehavior(typeof(PingOnlyBehavior));
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             configuration.AddOpenBehaviors([nonGenericOpenBehavior]));
@@ -339,7 +339,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_OpenBehaviorCollection_ReturnsSameConfigurationInstance_ForChaining()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         var result = configuration.AddOpenBehaviors([new OpenBehavior(typeof(LoggingBehavior<,>))]);
 
@@ -351,7 +351,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_SameBehaviorTwiceInOneBatchCall_BothPreservedInBehaviorsToRegister()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>), typeof(LoggingBehavior<,>)]);
 
@@ -361,7 +361,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_SameBehaviorOnceIndividuallyAndOnceInBatch_BothPreservedInBehaviorsToRegister()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehavior(typeof(LoggingBehavior<,>));
         configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
@@ -372,7 +372,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenBehaviors_SameBehaviorInTwoSeparateBatchCalls_BothPreservedInBehaviorsToRegister()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
         configuration.AddOpenBehaviors([typeof(LoggingBehavior<,>)]);
@@ -385,7 +385,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddRequestPreProcessor_SingleGenericArg_RegistersDiscoveredClosedInterface()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddRequestPreProcessor<AuditPreProcessor>();
 
@@ -398,7 +398,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddRequestPreProcessor_ThrowsInvalidOperationException_WhenTypeDoesNotImplementIRequestPreProcessor()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<InvalidOperationException>(() => configuration.AddRequestPreProcessor(typeof(NotAPipelineBehavior)));
     }
@@ -406,7 +406,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenRequestPreProcessor_RegistersTheOpenServiceType()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenRequestPreProcessor(typeof(GenericPreProcessor<>));
 
@@ -418,7 +418,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenRequestPreProcessor_ThrowsInvalidOperationException_WhenTypeIsNotGeneric()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<InvalidOperationException>(() => configuration.AddOpenRequestPreProcessor(typeof(AuditPreProcessor)));
     }
@@ -428,7 +428,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddRequestPostProcessor_SingleGenericArg_RegistersDiscoveredClosedInterface()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddRequestPostProcessor<AuditPostProcessor>();
 
@@ -441,7 +441,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddRequestPostProcessor_ThrowsInvalidOperationException_WhenTypeDoesNotImplementIRequestPostProcessor()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<InvalidOperationException>(() => configuration.AddRequestPostProcessor(typeof(NotAPipelineBehavior)));
     }
@@ -449,7 +449,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenRequestPostProcessor_RegistersTheOpenServiceType()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         configuration.AddOpenRequestPostProcessor(typeof(GenericPostProcessor<,>));
 
@@ -461,7 +461,7 @@ public class MediatRServiceConfigurationAdvancedTests
     [Fact]
     public void AddOpenRequestPostProcessor_ThrowsInvalidOperationException_WhenTypeIsNotGeneric()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Throws<InvalidOperationException>(() => configuration.AddOpenRequestPostProcessor(typeof(AuditPostProcessor)));
     }

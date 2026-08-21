@@ -178,7 +178,7 @@ public class NotificationPublisherCompatibilityTests
     [Fact]
     public void NotificationPublisher_IsPublicReadWriteProperty_OfTypeINotificationPublisher()
     {
-        var property = typeof(MediatRServiceConfiguration).GetProperty("NotificationPublisher")!;
+        var property = typeof(NEXMediatorServiceConfiguration).GetProperty("NotificationPublisher")!;
 
         Assert.Equal(typeof(INotificationPublisher), property.PropertyType);
         Assert.True(property.CanRead);
@@ -188,7 +188,7 @@ public class NotificationPublisherCompatibilityTests
     [Fact]
     public void NotificationPublisher_DefaultsToANewForeachAwaitPublisherInstance()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.IsType<ForeachAwaitPublisher>(configuration.NotificationPublisher);
     }
@@ -196,7 +196,7 @@ public class NotificationPublisherCompatibilityTests
     [Fact]
     public void NotificationPublisherType_IsPublicReadWriteProperty_OfTypeNullableType()
     {
-        var property = typeof(MediatRServiceConfiguration).GetProperty("NotificationPublisherType")!;
+        var property = typeof(NEXMediatorServiceConfiguration).GetProperty("NotificationPublisherType")!;
 
         Assert.Equal(typeof(Type), property.PropertyType);
         Assert.True(property.CanRead);
@@ -209,7 +209,7 @@ public class NotificationPublisherCompatibilityTests
     [Fact]
     public void NotificationPublisherType_DefaultsToNull()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Null(configuration.NotificationPublisherType);
     }

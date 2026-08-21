@@ -6,7 +6,7 @@ namespace NEXGov.Mediator.UnitTests;
 
 public class AdvancedPipelineRegistrationTests
 {
-    private static (ServiceProvider Provider, ScanningLog Log) BuildProvider(Action<MediatRServiceConfiguration> configure)
+    private static (ServiceProvider Provider, ScanningLog Log) BuildProvider(Action<NEXMediatorServiceConfiguration> configure)
     {
         var services = new ServiceCollection();
         var log = new ScanningLog();

@@ -20,14 +20,14 @@ public class AddMediatRTests
     {
         var services = new ServiceCollection();
 
-        Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator((Action<MediatRServiceConfiguration>)null!));
+        Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator((Action<NEXMediatorServiceConfiguration>)null!));
     }
 
     [Fact]
     public void AddMediatR_WithConfigurationInstance_ThrowsArgumentNullException_WhenServicesIsNull()
     {
         IServiceCollection services = null!;
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
         configuration.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
 
         Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator(configuration));
@@ -38,7 +38,7 @@ public class AddMediatRTests
     {
         var services = new ServiceCollection();
 
-        Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator((MediatRServiceConfiguration)null!));
+        Assert.Throws<ArgumentNullException>(() => services.AddNEXMediator((NEXMediatorServiceConfiguration)null!));
     }
 
     [Fact]

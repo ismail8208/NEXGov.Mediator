@@ -16,7 +16,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_HasExpectedFullNameAndIsPublicNonSealedClass()
     {
-        var type = typeof(MediatRServiceConfiguration);
+        var type = typeof(NEXMediatorServiceConfiguration);
 
         Assert.Equal("Microsoft.Extensions.DependencyInjection.MediatRServiceConfiguration", type.FullName);
         Assert.True(type.IsClass);
@@ -27,7 +27,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_HasPublicParameterlessConstructor()
     {
-        var constructor = typeof(MediatRServiceConfiguration).GetConstructor(Type.EmptyTypes);
+        var constructor = typeof(NEXMediatorServiceConfiguration).GetConstructor(Type.EmptyTypes);
 
         Assert.NotNull(constructor);
         Assert.True(constructor.IsPublic);
@@ -36,7 +36,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_MediatorImplementationType_DefaultsToMediator()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Equal(typeof(Mediator), configuration.MediatorImplementationType);
     }
@@ -44,7 +44,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_Lifetime_DefaultsToTransient()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Equal(ServiceLifetime.Transient, configuration.Lifetime);
     }
@@ -52,7 +52,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_AutoRegisterRequestProcessors_DefaultsToFalse()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.False(configuration.AutoRegisterRequestProcessors);
     }
@@ -60,7 +60,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_RequestExceptionActionProcessorStrategy_DefaultsToApplyForUnhandledExceptions()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.Equal(RequestExceptionActionProcessorStrategy.ApplyForUnhandledExceptions, configuration.RequestExceptionActionProcessorStrategy);
     }
@@ -70,20 +70,20 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_RegisterGenericHandlers_DefaultsToFalse()
     {
-        var configuration = new MediatRServiceConfiguration();
+        var configuration = new NEXMediatorServiceConfiguration();
 
         Assert.False(configuration.RegisterGenericHandlers);
     }
 
     [Theory]
-    [InlineData(nameof(MediatRServiceConfiguration.MaxGenericTypeParameters), 10)]
-    [InlineData(nameof(MediatRServiceConfiguration.MaxTypesClosing), 100)]
-    [InlineData(nameof(MediatRServiceConfiguration.MaxGenericTypeRegistrations), 125000)]
-    [InlineData(nameof(MediatRServiceConfiguration.RegistrationTimeout), 15000)]
+    [InlineData(nameof(NEXMediatorServiceConfiguration.MaxGenericTypeParameters), 10)]
+    [InlineData(nameof(NEXMediatorServiceConfiguration.MaxTypesClosing), 100)]
+    [InlineData(nameof(NEXMediatorServiceConfiguration.MaxGenericTypeRegistrations), 125000)]
+    [InlineData(nameof(NEXMediatorServiceConfiguration.RegistrationTimeout), 15000)]
     public void MediatRServiceConfiguration_GenericHandlerLimitProperty_HasExpectedDefault(string propertyName, int expectedDefault)
     {
-        var configuration = new MediatRServiceConfiguration();
-        var property = typeof(MediatRServiceConfiguration).GetProperty(propertyName, DeclaredPublicInstance);
+        var configuration = new NEXMediatorServiceConfiguration();
+        var property = typeof(NEXMediatorServiceConfiguration).GetProperty(propertyName, DeclaredPublicInstance);
 
         Assert.NotNull(property);
         Assert.Equal(typeof(int), property.PropertyType);
@@ -93,11 +93,11 @@ public class AddMediatRCompatibilityTests
     }
 
     [Theory]
-    [InlineData("RegisterServicesFromAssemblyContaining", 0, typeof(MediatRServiceConfiguration))]
-    [InlineData("RegisterServicesFromAssembly", 0, typeof(MediatRServiceConfiguration))]
+    [InlineData("RegisterServicesFromAssemblyContaining", 0, typeof(NEXMediatorServiceConfiguration))]
+    [InlineData("RegisterServicesFromAssembly", 0, typeof(NEXMediatorServiceConfiguration))]
     public void MediatRServiceConfiguration_ExposesExpectedInstanceMethod(string methodName, int genericArity, Type expectedReturnType)
     {
-        var methods = typeof(MediatRServiceConfiguration).GetMethods(DeclaredPublicInstance)
+        var methods = typeof(NEXMediatorServiceConfiguration).GetMethods(DeclaredPublicInstance)
             .Where(m => m.Name == methodName && m.GetGenericArguments().Length == genericArity)
             .ToArray();
 
@@ -108,7 +108,7 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_RegisterServicesFromAssemblyContaining_GenericOverload_HasNoParameters()
     {
-        var method = typeof(MediatRServiceConfiguration).GetMethods(DeclaredPublicInstance)
+        var method = typeof(NEXMediatorServiceConfiguration).GetMethods(DeclaredPublicInstance)
             .Single(m => m.Name == "RegisterServicesFromAssemblyContaining" && m.IsGenericMethodDefinition);
 
         Assert.Empty(method.GetParameters());
@@ -118,36 +118,36 @@ public class AddMediatRCompatibilityTests
     [Fact]
     public void MediatRServiceConfiguration_RegisterServicesFromAssemblyContaining_TypeOverload_HasExpectedSignature()
     {
-        var method = typeof(MediatRServiceConfiguration).GetMethods(DeclaredPublicInstance)
+        var method = typeof(NEXMediatorServiceConfiguration).GetMethods(DeclaredPublicInstance)
             .Single(m => m.Name == "RegisterServicesFromAssemblyContaining" && !m.IsGenericMethodDefinition);
 
         var parameters = method.GetParameters();
         Assert.Single(parameters);
         Assert.Equal(typeof(Type), parameters[0].ParameterType);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
     }
 
     [Fact]
     public void MediatRServiceConfiguration_RegisterServicesFromAssembly_HasExpectedSignature()
     {
-        var method = typeof(MediatRServiceConfiguration).GetMethod("RegisterServicesFromAssembly", DeclaredPublicInstance)!;
+        var method = typeof(NEXMediatorServiceConfiguration).GetMethod("RegisterServicesFromAssembly", DeclaredPublicInstance)!;
 
         var parameters = method.GetParameters();
         Assert.Single(parameters);
         Assert.Equal(typeof(Assembly), parameters[0].ParameterType);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
     }
 
     [Fact]
     public void MediatRServiceConfiguration_RegisterServicesFromAssemblies_HasExpectedSignature()
     {
-        var method = typeof(MediatRServiceConfiguration).GetMethod("RegisterServicesFromAssemblies", DeclaredPublicInstance)!;
+        var method = typeof(NEXMediatorServiceConfiguration).GetMethod("RegisterServicesFromAssemblies", DeclaredPublicInstance)!;
 
         var parameters = method.GetParameters();
         Assert.Single(parameters);
         Assert.Equal(typeof(Assembly[]), parameters[0].ParameterType);
         Assert.True(parameters[0].GetCustomAttribute<ParamArrayAttribute>() is not null);
-        Assert.Equal(typeof(MediatRServiceConfiguration), method.ReturnType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), method.ReturnType);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class AddMediatRCompatibilityTests
     public void AddMediatR_DelegateOverload_HasExpectedSignature()
     {
         var method = typeof(NEXMediatorServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(m => m.Name == "AddMediatR" && m.GetParameters()[1].ParameterType != typeof(MediatRServiceConfiguration));
+            .Single(m => m.Name == "AddMediatR" && m.GetParameters()[1].ParameterType != typeof(NEXMediatorServiceConfiguration));
 
         Assert.True(method.IsDefined(typeof(ExtensionAttribute), inherit: false));
         Assert.Equal(typeof(IServiceCollection), method.ReturnType);
@@ -187,7 +187,7 @@ public class AddMediatRCompatibilityTests
 
         Assert.Equal(typeof(IServiceCollection), parameters[0].ParameterType);
 
-        Assert.Equal(typeof(Action<MediatRServiceConfiguration>), parameters[1].ParameterType);
+        Assert.Equal(typeof(Action<NEXMediatorServiceConfiguration>), parameters[1].ParameterType);
         Assert.False(parameters[1].IsOptional);
     }
 
@@ -195,7 +195,7 @@ public class AddMediatRCompatibilityTests
     public void AddMediatR_ConfigurationInstanceOverload_HasExpectedSignature()
     {
         var method = typeof(NEXMediatorServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(m => m.Name == "AddMediatR" && m.GetParameters()[1].ParameterType == typeof(MediatRServiceConfiguration));
+            .Single(m => m.Name == "AddMediatR" && m.GetParameters()[1].ParameterType == typeof(NEXMediatorServiceConfiguration));
 
         Assert.True(method.IsDefined(typeof(ExtensionAttribute), inherit: false));
         Assert.Equal(typeof(IServiceCollection), method.ReturnType);
@@ -204,7 +204,7 @@ public class AddMediatRCompatibilityTests
         Assert.Equal(2, parameters.Length);
 
         Assert.Equal(typeof(IServiceCollection), parameters[0].ParameterType);
-        Assert.Equal(typeof(MediatRServiceConfiguration), parameters[1].ParameterType);
+        Assert.Equal(typeof(NEXMediatorServiceConfiguration), parameters[1].ParameterType);
         Assert.False(parameters[1].IsOptional);
     }
 

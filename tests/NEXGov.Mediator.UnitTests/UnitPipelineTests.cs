@@ -8,7 +8,7 @@ namespace NEXGov.Mediator.UnitTests;
 // compositions this task introduces.
 public class UnitPipelineTests
 {
-    private static (ServiceProvider Provider, ScanningLog Log) BuildProvider(Action<MediatRServiceConfiguration> configure)
+    private static (ServiceProvider Provider, ScanningLog Log) BuildProvider(Action<NEXMediatorServiceConfiguration> configure)
     {
         var services = new ServiceCollection();
         var log = new ScanningLog();

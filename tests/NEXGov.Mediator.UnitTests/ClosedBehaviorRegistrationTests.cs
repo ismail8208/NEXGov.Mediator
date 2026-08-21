@@ -10,7 +10,7 @@ namespace NEXGov.Mediator.UnitTests;
 // OpenGenericHandlerRegistrar (MED-023).
 public class ClosedBehaviorRegistrationTests
 {
-    private static IServiceCollection BuildServices(List<string> log, Action<MediatRServiceConfiguration> configure)
+    private static IServiceCollection BuildServices(List<string> log, Action<NEXMediatorServiceConfiguration> configure)
     {
         var services = new ServiceCollection();
         services.AddSingleton(log);

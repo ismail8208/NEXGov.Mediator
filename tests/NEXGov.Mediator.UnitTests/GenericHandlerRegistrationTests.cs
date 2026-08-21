@@ -11,7 +11,7 @@ namespace NEXGov.Mediator.UnitTests;
 // or approaches the default safety limits by accident.
 public class GenericHandlerRegistrationTests
 {
-    private static IServiceCollection BuildServices(Action<MediatRServiceConfiguration>? configure = null)
+    private static IServiceCollection BuildServices(Action<NEXMediatorServiceConfiguration>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddNEXMediator(cfg =>

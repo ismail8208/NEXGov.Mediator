@@ -17,7 +17,7 @@ internal static class AssemblyScanner
     /// every concrete, non-open-generic type across
     /// <paramref name="assembliesToScan"/> that satisfies
     /// <paramref name="typeEvaluator"/>. <see cref="ServiceRegistrar"/>
-    /// computes this once per <c>AddMediatR</c> call and passes it to
+    /// computes this once per <c>AddNEXMediator</c> call and passes it to
     /// every <see cref="ConnectClosedInterfaceImplementations"/> call
     /// (one per handler/notification/exception/processor family), instead
     /// of every family re-enumerating and re-filtering

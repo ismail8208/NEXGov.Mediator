@@ -4,7 +4,7 @@ namespace NEXGov.Mediator.Sample;
 
 // MED-015 test support only: gives NEXGov.Mediator.IntegrationTests a
 // second real assembly to register exception handlers/actions from, so the
-// assembly-proximity integration test exercises AddMediatR/Send against two
+// assembly-proximity integration test exercises AddNEXMediator/Send against two
 // genuinely different assemblies rather than simulating one. Internal, not
 // referenced by Program.cs, and never surfaced in the sample's own
 // console output — the sample's demonstrated behavior is unchanged.

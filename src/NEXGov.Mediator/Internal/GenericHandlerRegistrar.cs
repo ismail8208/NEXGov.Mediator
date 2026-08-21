@@ -147,7 +147,7 @@ internal static class GenericHandlerRegistrar
                     // families whose ordinary (non-generic) scanning uses TryAddTransient
                     // (request/stream handlers) or AddTransient (everything else). A
                     // consumer's own manual registration for the same closed service,
-                    // whether made before or after AddMediatR, therefore does not
+                    // whether made before or after AddNEXMediator, therefore does not
                     // automatically "win" the way it does against ordinary scanned request
                     // handlers; whichever registration is last in the provider wins on
                     // non-enumerable resolution. Also verified: always Transient, independent

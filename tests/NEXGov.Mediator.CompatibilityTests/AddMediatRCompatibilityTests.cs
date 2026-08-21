@@ -18,7 +18,7 @@ public class AddMediatRCompatibilityTests
     {
         var type = typeof(NEXMediatorServiceConfiguration);
 
-        Assert.Equal("Microsoft.Extensions.DependencyInjection.MediatRServiceConfiguration", type.FullName);
+        Assert.Equal("Microsoft.Extensions.DependencyInjection.NEXMediatorServiceConfiguration", type.FullName);
         Assert.True(type.IsClass);
         Assert.True(type.IsPublic);
         Assert.False(type.IsSealed);
@@ -167,7 +167,7 @@ public class AddMediatRCompatibilityTests
     {
         var type = typeof(NEXMediatorServiceCollectionExtensions);
 
-        Assert.Equal("Microsoft.Extensions.DependencyInjection.MediatRServiceCollectionExtensions", type.FullName);
+        Assert.Equal("Microsoft.Extensions.DependencyInjection.NEXMediatorServiceCollectionExtensions", type.FullName);
         Assert.True(type.IsClass);
         Assert.True(type.IsPublic);
         Assert.True(type.IsAbstract && type.IsSealed); // static class
@@ -177,7 +177,7 @@ public class AddMediatRCompatibilityTests
     public void AddMediatR_DelegateOverload_HasExpectedSignature()
     {
         var method = typeof(NEXMediatorServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(m => m.Name == "AddMediatR" && m.GetParameters()[1].ParameterType != typeof(NEXMediatorServiceConfiguration));
+            .Single(m => m.Name == "AddNEXMediator" && m.GetParameters()[1].ParameterType != typeof(NEXMediatorServiceConfiguration));
 
         Assert.True(method.IsDefined(typeof(ExtensionAttribute), inherit: false));
         Assert.Equal(typeof(IServiceCollection), method.ReturnType);
@@ -195,7 +195,7 @@ public class AddMediatRCompatibilityTests
     public void AddMediatR_ConfigurationInstanceOverload_HasExpectedSignature()
     {
         var method = typeof(NEXMediatorServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(m => m.Name == "AddMediatR" && m.GetParameters()[1].ParameterType == typeof(NEXMediatorServiceConfiguration));
+            .Single(m => m.Name == "AddNEXMediator" && m.GetParameters()[1].ParameterType == typeof(NEXMediatorServiceConfiguration));
 
         Assert.True(method.IsDefined(typeof(ExtensionAttribute), inherit: false));
         Assert.Equal(typeof(IServiceCollection), method.ReturnType);
@@ -212,7 +212,7 @@ public class AddMediatRCompatibilityTests
     public void AddMediatR_HasExactlyTwoOverloads()
     {
         var methods = typeof(NEXMediatorServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Where(m => m.Name == "AddMediatR")
+            .Where(m => m.Name == "AddNEXMediator")
             .ToArray();
 
         Assert.Equal(2, methods.Length);

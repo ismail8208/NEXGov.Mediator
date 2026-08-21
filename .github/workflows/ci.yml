@@ -1,0 +1,57 @@
+name: CI
+
+# Release-quality validation only: restore, Release build, full test suite,
+# Release pack, and confirming the expected package artifacts exist. This
+# workflow never publishes anywhere and never uses secrets/tokens — publishing
+# to NuGet.org is a separate, explicitly-authorized action, not automated here.
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore NEXGov.Mediator.slnx
+
+      - name: Build (Release)
+        run: dotnet build NEXGov.Mediator.slnx -c Release --no-restore
+
+      - name: Test (Release)
+        run: dotnet test NEXGov.Mediator.slnx -c Release --no-build
+
+      - name: Pack NEXGov.Mediator (Release)
+        run: dotnet pack src/NEXGov.Mediator/NEXGov.Mediator.csproj -c Release --no-build -o ./artifacts
+
+      - name: Verify package artifacts exist
+        shell: bash
+        run: |
+          test -f ./artifacts/NEXGov.Mediator.*.nupkg
+          test -f ./artifacts/NEXGov.Mediator.*.snupkg
+          ls -la ./artifacts
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: |
+            ./artifacts/*.nupkg
+            ./artifacts/*.snupkg
+          if-no-files-found: error

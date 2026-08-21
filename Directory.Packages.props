@@ -13,5 +13,7 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <!-- Benchmark infrastructure -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <!-- MED-028: release/packaging infrastructure (build-time only, never a consumer dependency) -->
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
   </ItemGroup>
 </Project>

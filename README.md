@@ -1,23 +1,48 @@
 # NEXGov.Mediator
 
-NEXGov.Mediator is a .NET library that implements the mediator pattern for
-in-process messaging: requests with a single handler, notifications with
-zero-or-more handlers, and a pipeline for cross-cutting behaviors around
-request handling.
+**NEXMediator** is an independent .NET mediator and CQRS library:
+requests with a single handler, notifications with zero-or-more handlers,
+and a pipeline for cross-cutting behaviors around request handling.
+Version 1 establishes a strong compatibility baseline with
+[MediatR](https://github.com/jbogard/MediatR) for familiar contracts and
+migration ease, while maintaining an independent API identity and an
+independent future development path — see
+[`docs/PRODUCT-DIRECTION.md`](./docs/PRODUCT-DIRECTION.md) for the full
+product direction.
 
-## Status: early development
+| | |
+|---|---|
+| Product | **NEXMediator** |
+| NuGet package | [`NEXGov.Mediator`](https://www.nuget.org/packages/NEXGov.Mediator) |
+| Namespace / assembly | `NEXGov.Mediator` |
+| DI entry point | `services.AddNEXMediator(...)` |
 
-This repository is in **early development**. Requests, handlers, `Send`
-dispatch, notifications/`Publish` (with a pluggable, DI-configurable
-`INotificationPublisher` strategy — sequential by default), pipeline
-behaviors, pre/post processors, exception handlers/actions, and
-dependency-injection registration (`AddMediatR` with assembly scanning,
-plus explicit `AddBehavior`/`AddOpenBehavior`/`AddOpenBehaviors`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
-registration) are implemented and tested. Streaming (request/handler/behavior
-contracts, runtime execution, and `AddMediatR` scanning/`AddStreamBehavior`/
-`AddOpenStreamBehavior` registration) is implemented and tested for closed
-stream handlers/behaviors. Nothing in this repository has had a stable
-release; treat it as pre-release.
+## Installation
+
+```sh
+dotnet add package NEXGov.Mediator
+```
+
+## Core capabilities
+
+- Request/response dispatch (`IRequest<TResponse>`, `IRequestHandler<,>`,
+  `ISender.Send`) and void-request dispatch (`IRequest`,
+  `IRequestHandler<TRequest>`), with automatic handler discovery via
+  assembly scanning.
+- Notifications with zero-or-more handlers (`INotification`,
+  `INotificationHandler<>`, the `NotificationHandler<TNotification>`
+  synchronous-handler convenience base class, `IPublisher.Publish`), with
+  a pluggable sequential (default) or concurrent publishing strategy.
+- Pipeline behaviors (`IPipelineBehavior<,>`), pre/post processors, and
+  exception handlers/actions with proximity-based ordering.
+- Streaming request/response dispatch (`IStreamRequest<TResponse>`,
+  `IStreamRequestHandler<,>`, `IStreamPipelineBehavior<,>`,
+  `ISender.CreateStream`).
+- `Microsoft.Extensions.DependencyInjection` registration via
+  `AddNEXMediator` — assembly scanning plus explicit
+  `AddBehavior`/`AddOpenBehavior`/`AddOpenBehaviors`/`AddRequestPreProcessor`/`AddRequestPostProcessor`
+  (and stream/open-generic equivalents), generic handler/processor
+  expansion, and unconditional open-to-open generic registration.
 
 ## Quick start
 
@@ -27,7 +52,7 @@ using NEXGov.Mediator;
 
 var services = new ServiceCollection();
 
-services.AddMediatR(cfg =>
+services.AddNEXMediator(cfg =>
 {
     cfg.RegisterServicesFromAssemblyContaining<Program>();
 });
@@ -49,7 +74,7 @@ public sealed class PingHandler : IRequestHandler<Ping, Pong>
 }
 ```
 
-`AddMediatR` scans the given assembly (or assemblies) for
+`AddNEXMediator` scans the given assembly (or assemblies) for
 `IRequestHandler<,>`, `IRequestHandler<>`, `INotificationHandler<>`, and
 `IRequestExceptionHandler<,,>`/`IRequestExceptionAction<,>`
 implementations and registers them automatically, alongside `IMediator`,
@@ -61,11 +86,12 @@ a complete runnable example, including a notification/`Publish` usage.
 
 Handlers are discovered automatically by scanning, but arbitrary
 cross-cutting pipeline behaviors are configured explicitly — matching the
-intended MediatR registration model, where scanning finds *your*
-handlers but you opt in to *behaviors* deliberately:
+MediatR-baseline registration model this project intentionally starts
+from, where scanning finds *your* handlers but you opt in to *behaviors*
+deliberately:
 
 ```csharp
-services.AddMediatR(cfg =>
+services.AddNEXMediator(cfg =>
 {
     cfg.RegisterServicesFromAssemblyContaining<Program>();
 
@@ -97,8 +123,8 @@ purely a convenience over the single-behavior form above.
 ### Streaming requests
 
 `IStreamRequest<TResponse>`/`IStreamRequestHandler<,>` implementations are
-discovered by the same `AddMediatR` scanning as ordinary request handlers
-— no manual registration needed for a closed handler:
+discovered by the same `AddNEXMediator` scanning as ordinary request
+handlers — no manual registration needed for a closed handler:
 
 ```csharp
 var stream = mediator.CreateStream(new CountTo(3));
@@ -144,7 +170,7 @@ who want something else:
 ```csharp
 using NEXGov.Mediator.NotificationPublishers;
 
-services.AddMediatR(cfg =>
+services.AddNEXMediator(cfg =>
 {
     cfg.RegisterServicesFromAssemblyContaining<Program>();
 
@@ -170,7 +196,7 @@ implementation into one closed registration per candidate type satisfying
 its own generic constraints:
 
 ```csharp
-services.AddMediatR(cfg =>
+services.AddNEXMediator(cfg =>
 {
     cfg.RegisterServicesFromAssemblyContaining<Program>();
     cfg.RegisterGenericHandlers = true;
@@ -183,14 +209,15 @@ public sealed class GetByIdHandler<TEntity> : IRequestHandler<GetById<TEntity>, 
 }
 ```
 
-`RegisterGenericHandlers` expands every family current MediatR itself
-drives through the same shared closing algorithm — not request handlers
-alone: `IRequestHandler<,>`, `IRequestHandler<>`, `INotificationHandler<>`,
-`IStreamRequestHandler<,>`, `IRequestExceptionHandler<,,>`, and
-`IRequestExceptionAction<,>`, plus (only when `AutoRegisterRequestProcessors`
-is also `true`) `IRequestPreProcessor<>`/`IRequestPostProcessor<,>`. Enabling
-it against a large assembly can increase startup registration work —
-every open-generic implementation across every one of these families is
+`RegisterGenericHandlers` expands every family the V1 MediatR baseline
+itself drives through the same shared closing algorithm — not request
+handlers alone: `IRequestHandler<,>`, `IRequestHandler<>`,
+`INotificationHandler<>`, `IStreamRequestHandler<,>`,
+`IRequestExceptionHandler<,,>`, and `IRequestExceptionAction<,>`, plus
+(only when `AutoRegisterRequestProcessors` is also `true`)
+`IRequestPreProcessor<>`/`IRequestPostProcessor<,>`. Enabling it against a
+large assembly can increase startup registration work — every
+open-generic implementation across every one of these families is
 evaluated against every other candidate type in the scanned assemblies —
 and that work is bounded by the same `MaxGenericTypeParameters`/
 `MaxTypesClosing`/`MaxGenericTypeRegistrations`/`RegistrationTimeout`
@@ -221,57 +248,111 @@ cannot resolve on its own.
 
 See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the exact
 constraint/limit/timeout/arity semantics of all three mechanisms —
-several of them replicate genuinely surprising, verified current-MediatR
+several of them replicate genuinely surprising, verified MediatR
 behavior — and [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)
 for the point-in-time gap analysis and the documented exclusions/deviations
 that keep this a **near drop-in** claim rather than an absolute one. No
-known P0, P1, or P2 compatibility gaps remain as of MED-026; a small
-number of deliberate, documented P3 deviations and the permanently
+known P0, P1, or P2 compatibility gaps remain as of the V1 baseline; a
+small number of deliberate, documented P3 deviations and the permanently
 excluded commercial-licensing subsystem are why this remains LEVEL 4
-("near drop-in with documented exclusions/deviations") rather than a
-LEVEL 5 "drop-in" claim — see that document's Compatibility Claim section.
+("near drop-in for the V1 baseline, with documented naming/edge-case
+differences") rather than a LEVEL 5 "drop-in" claim — see that document's
+Compatibility Claim section.
 
-## Compatibility goal
+## MediatR compatibility baseline
 
-NEXGov.Mediator's design goal is to be a **near drop-in, source-compatible
-alternative to MediatR** for a defined, supported subset of the API
-surface — not a claim of literal 100% MediatR parity. Where an
-application uses a supported request/handler, notification, pipeline, or
-dependency-injection pattern, migrating should be, in principle, a
-namespace change:
+NEXMediator V1 deliberately mirrors many familiar MediatR contracts and
+runtime behaviors — this is a **compatibility baseline**, not
+NEXMediator's permanent identity. MediatR is NEXMediator's V1
+compatibility reference and historical starting point; it is not a
+permanent specification NEXMediator is obligated to keep copying. See
+[`docs/PRODUCT-DIRECTION.md`](./docs/PRODUCT-DIRECTION.md) for the full
+policy on how future MediatR changes are (and are not) adopted, and for
+the distinction between NEXMediator's stable *compatibility surface* and
+its independent *extension surface*.
 
-```csharp
-using MediatR;
-```
-
-becomes
-
-```csharp
-using NEXGov.Mediator;
-```
-
-with the surrounding code otherwise unchanged. This is independently
-verified end to end against the current `jasontaylordev/CleanArchitecture`
-reference template's actual `AddMediatR` usage (see
-[`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)'s
-CleanArchitecture Migration Status), not merely assumed from the API
-shape matching.
-
-This is a compatibility **goal**, not a claim of exhaustive parity. See
-[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the current
-compatibility matrix, [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)
-for the point-in-time gap analysis against current MediatR — including
-the documented exclusions and deviations (what's missing, what's
-intentionally excluded, and the recommended V1 scope) that any consumer
-relying on more than the documented core subset should read first — and
-[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the architectural
-principles guiding the implementation. An API family is only considered
-compatible once it has passing tests demonstrating it.
+The compatibility baseline is measured against the specific upstream
+commit pinned in [`docs/UPSTREAM-AUDIT.md`](./docs/UPSTREAM-AUDIT.md),
+not against MediatR "in general" or against whatever MediatR looks like
+at some later date. [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md)
+is the detailed matrix of what it covers;
+[`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md) is the
+point-in-time gap analysis and verified compatibility level.
 
 **NEXGov.Mediator is not MediatR.** It is a clean-room implementation:
 no source code from MediatR or any other mediator library has been
 copied, adapted, or otherwise reused. Only publicly observable behavior
-is used as a compatibility reference.
+is used as a compatibility reference. This is not a claim of exhaustive
+or permanent parity — "V1 Required"/"V1 Extended" in the compatibility
+matrix states intent for the documented baseline, not an open-ended
+promise.
+
+### Migration guidance
+
+Typical migration from MediatR to NEXMediator is **not** a namespace-only
+change — it requires these steps:
+
+1. Replace the package reference (`MediatR` → `NEXGov.Mediator`).
+2. Replace the namespace/imports (`using MediatR;` → `using
+   NEXGov.Mediator;`).
+3. Rename the DI bootstrap call: `AddMediatR(...)` → `AddNEXMediator(...)`.
+4. If your code references `MediatRServiceConfiguration` directly (e.g. a
+   typed configuration method, not just the `cfg =>` lambda parameter),
+   rename it to `NEXMediatorServiceConfiguration`.
+
+Most request/handler/pipeline code — `IRequest<TResponse>`,
+`IRequestHandler<,>`, `ISender`/`IMediator`, `IPipelineBehavior<,>`,
+notifications, streaming, and the configuration lambda's own members
+(`RegisterServicesFromAssembly`, `AddOpenBehavior`, and so on) — remains
+structurally familiar and requires no further changes, within the
+documented V1 baseline. This was independently verified end to end
+against the current `jasontaylordev/CleanArchitecture` reference
+template's actual registration code (steps 1–3 above being the only
+changes needed) — see
+[`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)'s
+CleanArchitecture Migration Status, not merely assumed from the API
+shape matching.
+
+### Known differences/deviations
+
+The verified compatibility level is **LEVEL 4 — near drop-in
+compatibility for the V1 MediatR baseline, with intentional NEXMediator
+API naming and documented edge-case deviations/exclusions** (not "100%
+compatible with MediatR"). Beyond the intentional `AddNEXMediator`/
+`NEXMediatorServiceConfiguration`/`NEXMediatorServiceCollectionExtensions`
+naming (see above), a small number of narrow, deliberate runtime
+deviations and the permanently-excluded commercial-licensing subsystem
+are documented with full evidence in
+[`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md) — read
+that document before relying on anything beyond the documented core
+subset.
+
+## Future independent evolution
+
+NEXMediator's V1 compatibility baseline is a starting point, not a
+ceiling. Future versions may introduce NEXMediator-specific APIs,
+observability/diagnostics, performance improvements, alternative
+dispatch strategies, developer tooling, or other capabilities that
+MediatR does not provide — evaluated on their own merits, not gated on
+whether MediatR has them. See
+[`docs/PRODUCT-DIRECTION.md`](./docs/PRODUCT-DIRECTION.md) for the full
+policy (the Compatibility Surface vs. Extension Surface distinction, the
+Upstream MediatR Adoption Policy, and how breaking changes are governed
+by normal semantic versioning). No extension-surface features are
+implemented yet — this section states direction, not a commitment or
+timeline.
+
+## Versioning
+
+NEXGov.Mediator follows [Semantic Versioning](https://semver.org/):
+
+- **MAJOR** — a breaking change to the public API or observable behavior.
+- **MINOR** — a backward-compatible addition (new API surface or
+  functionality).
+- **PATCH** — a backward-compatible fix.
+
+The package version is declared once, in `Directory.Build.props`, and
+applies to the whole repository.
 
 ## Repository structure
 
@@ -280,64 +361,25 @@ is used as a compatibility reference.
 /tests          Unit, integration, and compatibility test projects
 /samples        Sample application(s) demonstrating usage
 /benchmarks     Performance benchmarks (BenchmarkDotNet)
-/docs           Architecture and compatibility documentation
+/docs           Architecture, product-direction, and compatibility documentation
 ```
 
-## Roadmap (high level)
+## Roadmap
 
-- [x] Project foundation and repository structure
-- [x] Request contracts (`IBaseRequest`, `IRequest`, `IRequest<TResponse>`)
-- [x] Handler contracts and dispatch (`ISender`, `IRequestHandler<>`)
-- [x] Notifications and publishing (`IPublisher`, `INotificationHandler<>`)
-- [x] Pipeline behaviors (`IPipelineBehavior<,>`)
-- [x] Pre/post processors and exception handlers/actions
-- [x] Dependency-injection registration (`AddMediatR` with assembly
-      scanning for handlers, notification handlers, and exception
-      handlers/actions)
-- [x] Explicit behavior/processor registration helpers (`AddBehavior`,
-      `AddOpenBehavior`, `AddOpenBehaviors` (batch), `AddRequestPreProcessor`,
-      `AddOpenRequestPreProcessor`, `AddRequestPostProcessor`,
-      `AddOpenRequestPostProcessor`)
-- [x] Generic handler/processor registration (`RegisterGenericHandlers`,
-      implemented for request handlers only in MED-013, generalized in
-      MED-022 to every family current MediatR itself drives through the
-      same shared closing algorithm — notification handlers, stream
-      handlers, exception handlers/actions, and pre/post processors)
-- [x] Unconditional open-to-open generic registration (MED-023, a
-      mechanism distinct from `RegisterGenericHandlers` — notification
-      handlers, exception handlers/actions, and, when
-      `AutoRegisterRequestProcessors` is `true`, pre/post processors)
-- [x] `AddOpenBehavior` nested-generic-response closing (MED-024, a
-      fourth, independent mechanism; see `docs/COMPATIBILITY-AUDIT.md`)
-- [x] Final compatibility audit against a pinned current-upstream commit
-      (MED-025) — independently re-verified the entire project, found and
-      fixed a P1 cancellation-forwarding defect (a behavior calling
-      `next()` with no argument, as the CleanArchitecture reference
-      template's own behaviors do, no longer silently loses the real
-      cancellation token), and assigned a documented Compatibility LEVEL
-      4 claim
-- [x] `NotificationHandler<TNotification>` synchronous-handler convenience
-      class (MED-026, closing the one P2 gap MED-025 found; discovered
-      automatically by existing `AddMediatR` scanning with no scanner
-      changes needed). No known P0, P1, or P2 compatibility gaps remain;
-      see `docs/COMPATIBILITY-AUDIT.md` for the remaining documented P3
-      deviations/exclusions and the explicit LEVEL 4 reassessment
-- [x] Void-request `Unit` typing and current handler-proximity exception
-      ordering
-- [x] Streaming requests (`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,
-      `IStreamPipelineBehavior<,>`, `StreamHandlerDelegate<>`, `CreateStream(...)`
-      runtime, and `AddMediatR` scanning/`AddStreamBehavior`/`AddOpenStreamBehavior`
-      registration for closed stream handlers, plus generic stream-handler
-      expansion under `RegisterGenericHandlers` as of MED-022)
-- [x] Pluggable notification publishing (`INotificationPublisher`,
-      `NotificationHandlerExecutor`, `ForeachAwaitPublisher` (default,
-      sequential), `TaskWhenAllPublisher` (concurrent),
-      `MediatRServiceConfiguration.NotificationPublisher`/`NotificationPublisherType`,
-      and the `Mediator(IServiceProvider, INotificationPublisher)`
-      constructor)
-- [ ] Compatibility test suite covering the V1 Required and V1 Extended
-      surface
+NEXMediator's V1 surface is complete: request/response dispatch,
+notifications and publishing, pipeline behaviors/processors/exception
+handling, streaming, and DI registration (including generic handler
+expansion and open-to-open registration) are all implemented and tested
+against the MediatR V1 compatibility baseline — see
+[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the detailed
+matrix and [`CHANGELOG.md`](./CHANGELOG.md) for the 1.0.0 release
+summary. Detailed build history (the incremental work packages that
+delivered V1) lives in `docs/COMPATIBILITY-AUDIT.md`/`docs/UPSTREAM-AUDIT.md`
+for anyone who wants it — it is not repeated here as a forward-looking
+roadmap.
 
-Roadmap items are tracked and refined as individual work packages; see
-[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the detailed API
-compatibility matrix.
+Going forward, NEXMediator's roadmap is about **independent product
+evolution**, not "which MediatR feature is still uncopied" — see
+[`docs/PRODUCT-DIRECTION.md`](./docs/PRODUCT-DIRECTION.md)'s Independent
+Evolution Policy for the kinds of future work that policy allows. No
+specific future feature list is committed to by this README.

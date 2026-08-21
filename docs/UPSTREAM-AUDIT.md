@@ -13,6 +13,11 @@ contract byte-for-byte unchanged from what MED-025 recorded. See quirk 7
 below for the update; the pinned commit, repository, and every other
 finding in this document are otherwise unchanged and still authoritative.
 
+**MED-029 note:** Upstream MediatR is NEXMediator's V1 compatibility
+reference, not the permanent product specification for NEXMediator — see
+[`docs/PRODUCT-DIRECTION.md`](./PRODUCT-DIRECTION.md). Everything below
+remains historical technical evidence, unmodified.
+
 ## Target
 
 - **Repository:** `LuckyPennySoftware/MediatR` (canonical location — `jbogard/MediatR`
@@ -224,7 +229,10 @@ methods across `RegisterServicesFrom*` (4), `AddBehavior` (4),
 - **Configuration API**: every property and method in
   `MediatrServiceConfiguration.cs` enumerated directly (not from prior
   NEXGov docs) and cross-checked against
-  `src/NEXGov.Mediator/DependencyInjection/MediatRServiceConfiguration.cs`.
+  `src/NEXGov.Mediator/DependencyInjection/NEXMediatorServiceConfiguration.cs`
+  (named `MediatRServiceConfiguration.cs` at MED-025 audit time; renamed
+  as part of NEXMediator's own DI-bootstrap identity after MED-026 — see
+  `docs/PRODUCT-DIRECTION.md`).
 - **Licensing** (`Licensing/*.cs`, `MediatRServiceCollectionExtensions.CheckLicense`):
   read in full to precisely characterize the `ILoggerFactory` requirement
   (see Discovered Quirks below) — this project's LicenseKey/licensing
@@ -363,7 +371,7 @@ methods across `RegisterServicesFrom*` (4), `AddBehavior` (4),
    cancelled token is silently ignored, verified both by reading upstream
    source and by a dedicated NEXGov.Mediator unit test
    (`ExplicitInterfaceHandle_IgnoresTheCancellationToken`). Discovered by
-   `AddMediatR`'s existing assembly scanning with **zero production
+   `AddNEXMediator`'s existing assembly scanning with **zero production
    scanner/registration code changes** — `Type.GetInterfaces()`'s
    transitive closure (MED-012) already surfaces
    `INotificationHandler<TNotification>` for any concrete class deriving

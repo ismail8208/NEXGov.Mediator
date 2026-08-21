@@ -1,7 +1,7 @@
 namespace NEXGov.Mediator.Internal;
 
 /// <summary>
-/// Shared type-introspection helpers used by <c>MediatRServiceConfiguration</c>'s
+/// Shared type-introspection helpers used by <c>NEXMediatorServiceConfiguration</c>'s
 /// advanced registration methods (<c>AddBehavior</c>, <c>AddRequestPreProcessor</c>,
 /// <c>AddRequestPostProcessor</c>) and by <see cref="AssemblyScanner"/>.
 /// </summary>

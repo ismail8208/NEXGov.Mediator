@@ -9,12 +9,29 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- MED-028: only forces the deterministic/CI build path (embedded source
+         paths mapped, no local-machine paths) when actually running in GitHub
+         Actions — an ordinary local build/pack is unaffected. -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- MED-028: single authoritative version for every project in the
+         repository (only the packable NEXGov.Mediator project turns this
+         into a NuGet package version; elsewhere it only sets assembly
+         version metadata). Bump policy: MAJOR = breaking public API/behavior
+         change, MINOR = backward-compatible new functionality, PATCH =
+         backward-compatible fix. See README.md's Versioning section. -->
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <PropertyGroup>
     <Authors>NEXGov.Mediator Contributors</Authors>
     <Company>NEXGov</Company>
-    <Product>NEXGov.Mediator</Product>
+    <!-- Product is the human-facing product identity (NEXMediator);
+         PackageId/AssemblyName/RootNamespace/solution identity remain
+         NEXGov.Mediator — see README.md's naming note. -->
+    <Product>NEXMediator</Product>
     <Copyright>Copyright (c) NEXGov.Mediator Contributors</Copyright>
     <NeutralLanguage>en-US</NeutralLanguage>
   </PropertyGroup>

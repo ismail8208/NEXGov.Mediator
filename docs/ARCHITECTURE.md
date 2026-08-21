@@ -1,26 +1,68 @@
 # Architecture Principles
 
 This document records the foundational architectural decisions for
-NEXGov.Mediator. It is expected to grow as later work packages introduce
-the request/handler pipeline, notification dispatch, and DI integration.
+NEXGov.Mediator (product name: NEXMediator). It is expected to grow as
+later work packages introduce new runtime behavior and DI integration.
+
+## Product independence
+
+**NEXMediator is independently owned and independently evolved.** MediatR
+is NEXMediator's V1 compatibility baseline and historical reference — the
+starting point that shaped V1's contracts and runtime semantics — not a
+permanent architectural authority NEXMediator is obligated to keep
+mirroring. See [`PRODUCT-DIRECTION.md`](./PRODUCT-DIRECTION.md) for the
+full policy; this document only restates the parts that bear directly on
+architectural decisions:
+
+- **Compatibility surface stability.** The MediatR-mirroring public API
+  (`IRequest`, `IRequestHandler<,>`, `ISender`/`IPublisher`/`IMediator`,
+  pipeline/notification/streaming contracts — see
+  [`COMPATIBILITY.md`](./COMPATIBILITY.md)) should remain stable wherever
+  practical, since migration value and developer familiarity depend on
+  it directly.
+- **Extension surface independence.** Future NEXMediator-specific APIs
+  with no MediatR equivalent are a separate surface: they use
+  NEXMediator terminology, are not forced into MediatR-shaped naming,
+  and are additive rather than a replacement for the compatibility
+  surface.
+- **Upstream MediatR is not a permanent architectural authority.** A
+  future MediatR change is evaluated (usefulness, architectural fit,
+  migration value, complexity cost) before any NEXMediator work is
+  scoped around it — see `PRODUCT-DIRECTION.md`'s Upstream MediatR
+  Adoption Policy. It is not adopted automatically.
+- **Breaking the compatibility surface requires normal semantic-versioning
+  discipline** — a MAJOR version bump with documented rationale, the same
+  protection any stable public API gets, not an unconditional promise to
+  mirror MediatR forever.
+- **NEXMediator-specific APIs use NEXMediator terminology.** The DI
+  bootstrap identity (`AddNEXMediator`, `NEXMediatorServiceConfiguration`,
+  `NEXMediatorServiceCollectionExtensions`) is the precedent: it was
+  deliberately given NEXMediator-specific names rather than MediatR's own
+  (`AddMediatR`, `MediatRServiceConfiguration`,
+  `MediatRServiceCollectionExtensions`), and that naming is official —
+  not a gap, not to be reverted or aliased.
 
 ## Core principles
 
 1. **Clean-room implementation.** NEXGov.Mediator is written independently.
    No source code from MediatR or any other mediator library is copied or
    adapted. Only publicly observable behavior and API shapes are used as a
-   compatibility reference.
+   compatibility reference for the V1 baseline (see "Product independence"
+   above for how this baseline relates to NEXMediator's own identity).
 
-2. **Public API compatibility is a first-class requirement.** The
-   supported subset of the MediatR public surface (see
-   [`COMPATIBILITY.md`](./COMPATIBILITY.md)) drives type names, method
-   signatures, and namespaces. Design decisions that would silently break
+2. **Public API compatibility is a first-class requirement for the V1
+   baseline.** The supported subset of the MediatR public surface (see
+   [`COMPATIBILITY.md`](./COMPATIBILITY.md)) drove V1's type names, method
+   signatures, and namespace. Design decisions that would silently break
    source compatibility for a supported member require a deliberate,
-   documented exception.
+   documented exception. This is a stability commitment for the
+   compatibility surface, not a promise that every future NEXMediator
+   decision must match MediatR's own naming — see "Product independence"
+   above.
 
-3. **Namespace is `NEXGov.Mediator`.** Everywhere MediatR uses the
-   `MediatR` namespace, NEXGov.Mediator uses `NEXGov.Mediator`. This is the
-   one unavoidable, intentional divergence that migration depends on:
+3. **Namespace is `NEXGov.Mediator`; the DI bootstrap identity is
+   NEXMediator's own.** Everywhere MediatR uses the `MediatR` namespace,
+   NEXGov.Mediator uses `NEXGov.Mediator`:
 
    ```csharp
    using MediatR;
@@ -29,6 +71,15 @@ the request/handler pipeline, notification dispatch, and DI integration.
    ```csharp
    using NEXGov.Mediator;
    ```
+
+   This is **not** the only intentional divergence migration depends on:
+   the DI bootstrap call and its configuration type were deliberately
+   given NEXMediator-specific names —
+   `AddMediatR(...)` → `AddNEXMediator(...)` and
+   `MediatRServiceConfiguration` → `NEXMediatorServiceConfiguration` — a
+   second, equally intentional product-identity decision. See the
+   README's Migration guidance for the full, accurate migration step
+   list.
 
 4. **Internal implementation does not need to match MediatR internals.**
    Compatibility is defined at the public API boundary. Internal data
@@ -48,7 +99,7 @@ the request/handler pipeline, notification dispatch, and DI integration.
    dependencies. MED-010 introduces exactly one:
    `Microsoft.Extensions.DependencyInjection.Abstractions` — the minimal
    package containing `IServiceCollection`/`ServiceDescriptor`/`TryAdd*`,
-   required to implement the public `AddMediatR` registration API at all;
+   required to implement the public `AddNEXMediator` registration API at all;
    the full `Microsoft.Extensions.DependencyInjection` package (the
    concrete container implementation) is deliberately not referenced,
    since consumers bring their own container. Test, sample, and benchmark
@@ -165,7 +216,7 @@ method), and hands the sequence to the configured `INotificationPublisher`
 - **The default strategy is `ForeachAwaitPublisher`** — sequential,
   awaiting each handler before starting the next, stopping and
   propagating unchanged on the first exception. A consumer doing only
-  `services.AddMediatR(...)` (no publisher configuration) observes
+  `services.AddNEXMediator(...)` (no publisher configuration) observes
   identical behavior to before MED-020.
 - **`TaskWhenAllPublisher` provides concurrent execution**: every
   handler's callback is invoked up front (starting its work immediately,
@@ -185,7 +236,7 @@ method), and hands the sequence to the configured `INotificationPublisher`
   strategy caches instances across publishes.
 - **`Mediator`'s two constructors select the strategy.** `Mediator(IServiceProvider)`
   uses `ForeachAwaitPublisher`; `Mediator(IServiceProvider, INotificationPublisher)`
-  uses the supplied strategy. `AddMediatR` never constructs `Mediator`
+  uses the supplied strategy. `AddNEXMediator` never constructs `Mediator`
   directly — it registers both `IMediator` and `INotificationPublisher`
   as services, and ordinary Microsoft.Extensions.DependencyInjection
   constructor selection (which prefers the constructor with the most
@@ -386,11 +437,11 @@ pipeline behaviors (namespace `NEXGov.Mediator.Pipeline`).
 
 ## DI / assembly-scanning principles
 
-Introduced in MED-010 alongside `AddMediatR`, `MediatRServiceConfiguration`
+Introduced in MED-010 alongside `AddNEXMediator`, `NEXMediatorServiceConfiguration`
 (namespace `Microsoft.Extensions.DependencyInjection`, mirroring
 MediatR's own placement), and the internal `ServiceRegistrar`/`AssemblyScanner`.
 
-- **Assemblies are explicitly selected by configuration.** `AddMediatR`
+- **Assemblies are explicitly selected by configuration.** `AddNEXMediator`
   scans only the assemblies added via `RegisterServicesFromAssembly`/`RegisterServicesFromAssemblies`/`RegisterServicesFromAssemblyContaining`;
   nothing is scanned implicitly (e.g. the calling assembly is never
   assumed).
@@ -430,7 +481,7 @@ MediatR's own placement), and the internal `ServiceRegistrar`/`AssemblyScanner`.
 - **Handler lifetime remains DI-controlled.** Scanned request/notification/exception
   handlers are registered `Transient` (matching current MediatR's
   foundational scanning defaults); `IMediator`/`ISender`/`IPublisher` use
-  `MediatRServiceConfiguration.Lifetime` (default `Transient`).
+  `NEXMediatorServiceConfiguration.Lifetime` (default `Transient`).
 - **Multiple notification handlers (and exception handlers/actions) are
   preserved** — scanning uses `AddTransient` (never `TryAdd`) for these
   families, so every discovered implementation stays registered; request
@@ -441,7 +492,7 @@ MediatR's own placement), and the internal `ServiceRegistrar`/`AssemblyScanner`.
   same assembly twice, or two overlapping assembly lists, produces no
   duplicate request-handler registrations (`TryAddTransient` no-ops after
   the first). A consumer's own manual handler registration always wins
-  over a scanned one, whether registered before `AddMediatR` (the scan's
+  over a scanned one, whether registered before `AddNEXMediator` (the scan's
   `TryAddTransient` then no-ops) or after (the manual registration is the
   last one, and `IServiceProvider.GetService` for a non-enumerable
   resolution returns the last-registered implementation).
@@ -471,16 +522,16 @@ MediatR's own placement), and the internal `ServiceRegistrar`/`AssemblyScanner`.
 
 ## Advanced registration principles
 
-Introduced in MED-011 alongside `MediatRServiceConfiguration.AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddOpenRequestPreProcessor`/`AddRequestPostProcessor`/`AddOpenRequestPostProcessor`.
+Introduced in MED-011 alongside `NEXMediatorServiceConfiguration.AddBehavior`/`AddOpenBehavior`/`AddRequestPreProcessor`/`AddOpenRequestPreProcessor`/`AddRequestPostProcessor`/`AddOpenRequestPostProcessor`.
 
 - **Configuration records service-registration intent; it does not act.**
   These methods only validate the given type and append a
   `ServiceDescriptor` to `BehaviorsToRegister`/`RequestPreProcessorsToRegister`/`RequestPostProcessorsToRegister`
   — they never resolve a service or construct an implementation instance.
-- **`ServiceRegistrar` applies that intent** at `AddMediatR` time, in
+- **`ServiceRegistrar` applies that intent** at `AddNEXMediator` time, in
   `AddRequiredServices` — the same method MED-010 already wrote to
   consume these lists; MED-011 needed **zero changes** to
-  `ServiceRegistrar`, only to `MediatRServiceConfiguration` (the methods
+  `ServiceRegistrar`, only to `NEXMediatorServiceConfiguration` (the methods
   that populate the lists it already read).
 - **Runtime instances remain DI-owned.** A behavior/processor registered
   through this API is resolved by `IServiceProvider` on every dispatch,
@@ -502,7 +553,7 @@ Introduced in MED-011 alongside `MediatRServiceConfiguration.AddBehavior`/`AddOp
 - **Processors execute exclusively through the standard processor
   behaviors** (`RequestPreProcessorBehavior<,>`/`RequestPostProcessorBehavior<,>`)
   — `AddRequestPreProcessor`/`AddRequestPostProcessor` insert that
-  behavior at most once per `AddMediatR` call (via `TryAddEnumerable`,
+  behavior at most once per `AddNEXMediator` call (via `TryAddEnumerable`,
   regardless of how many individual processors were registered), so
   registering multiple processors never causes duplicate execution.
 - **No special processor or behavior logic exists in `Mediator`.**
@@ -526,8 +577,8 @@ Introduced in MED-013 for request handlers only, via the internal
 `GenericRequestHandlerRegistrar`; generalized in MED-022 to every family
 current source's own shared closing algorithm drives, via the renamed
 internal `GenericHandlerRegistrar`. Called once from
-`ServiceRegistrar.AddMediatRClasses` after ordinary scanning, gated on
-`MediatRServiceConfiguration.RegisterGenericHandlers`.
+`ServiceRegistrar.AddNEXMediatorClasses` after ordinary scanning, gated on
+`NEXMediatorServiceConfiguration.RegisterGenericHandlers`.
 
 - **Opt-in, but spans every participating family — not request handlers
   alone.** Disabled by default; when enabled, expands open-generic
@@ -596,7 +647,7 @@ internal `GenericHandlerRegistrar`. Called once from
   written by hand, for every family, not only request handlers.
 - **Candidate discovery stays assembly-bounded.** Both the implementation
   candidates themselves and the types later used to close their generic
-  parameters are scanned only from `MediatRServiceConfiguration.AssembliesToRegister`
+  parameters are scanned only from `NEXMediatorServiceConfiguration.AssembliesToRegister`
   — never `AppDomain.CurrentDomain.GetAssemblies()` — for every family,
   unchanged from MED-013.
 - **A second, unconditional mechanism in current source is a genuinely
@@ -616,7 +667,7 @@ internal `GenericHandlerRegistrar`. Called once from
 ## Unconditional open-to-open registration principles
 
 Introduced in MED-023, via the internal `OpenGenericHandlerRegistrar`,
-called once from `ServiceRegistrar.AddMediatRClasses` alongside (but
+called once from `ServiceRegistrar.AddNEXMediatorClasses` alongside (but
 independently of) `GenericHandlerRegistrar` above.
 
 - **Distinct from `RegisterGenericHandlers`, not a variant of it.** Runs
@@ -676,12 +727,12 @@ pool with either.
   substitution has no way to work backward from a requested closed
   service `IPipelineBehavior<Ping, Result<string>>` to the right `TValue`
   for this implementation. Registering the missing closed descriptors
-  explicitly, at `AddMediatR` time, is the only way to make this shape
+  explicitly, at `AddNEXMediator` time, is the only way to make this shape
   resolve at all.
 - **Discovery happens once, at registration time, over already-known
   concrete types — never at runtime, never cached per-request.** The
   mechanism scans `AssembliesToRegister` for concrete `IRequest<TResponse>`
-  implementations exactly once per `AddMediatR` call (memoized across
+  implementations exactly once per `AddNEXMediator` call (memoized across
   every triggering `BehaviorsToRegister` entry within that call, not
   re-scanned per entry) and generates a fixed, final set of
   `ServiceDescriptor`s. Nothing about request dispatch itself changes;
@@ -727,7 +778,7 @@ pool with either.
 
 MED-017 introduced the streaming pipeline **contracts**. MED-018 added
 their runtime (see "Streaming runtime principles" below); automatic
-`AddMediatR` discovery of stream handlers/behaviors remains deferred to
+`AddNEXMediator` discovery of stream handlers/behaviors remains deferred to
 MED-019.
 
 - **Streaming requests use `IAsyncEnumerable<T>`, not `Task<T>`.**
@@ -764,7 +815,7 @@ registered** stream handlers/behaviors, verified against current
 MediatR's own `Mediator.CreateStream`/`StreamRequestHandlerWrapperImpl`
 runtime source (clean-room reimplementation — an independently designed
 wrapper/cache/delegate-composition architecture, not transcribed code).
-Automatic discovery via `AddMediatR` remains deferred to MED-019.
+Automatic discovery via `AddNEXMediator` remains deferred to MED-019.
 
 - **Dispatch is by concrete runtime type, never the declared/static
   type** — identical principle to `Send(...)`. A variable statically
@@ -841,7 +892,7 @@ Automatic discovery via `AddMediatR` remains deferred to MED-019.
 
 ## Streaming DI/registration principles
 
-MED-019 extended assembly scanning and `MediatRServiceConfiguration` to
+MED-019 extended assembly scanning and `NEXMediatorServiceConfiguration` to
 cover streaming. These principles describe only the DI/scanning layer —
 see "DI / assembly-scanning principles" and "Streaming runtime
 principles" above for the underlying mechanics they build on.
@@ -861,7 +912,7 @@ principles" above for the underlying mechanics they build on.
 - **Stream behavior configuration preserves registration order**,
   matching the MED-018-verified first-registered-outermost runtime
   convention: `StreamBehaviorsToRegister` is an ordered list, and
-  `AddMediatR` registers its descriptors in that order.
+  `AddNEXMediator` registers its descriptors in that order.
 - **Open stream behaviors are closed by Microsoft.Extensions.DependencyInjection
   itself**, not by this project — `AddOpenStreamBehavior` registers the
   open `IStreamPipelineBehavior<,>` service/open-implementation pair once;

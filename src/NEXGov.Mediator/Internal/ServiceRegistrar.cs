@@ -6,7 +6,7 @@ namespace NEXGov.Mediator.Internal;
 
 /// <summary>
 /// Coordinates assembly scanning and core service registration for
-/// <c>AddMediatR</c>. Reads only <see cref="Type"/> metadata and
+/// <c>AddNEXMediator</c>. Reads only <see cref="Type"/> metadata and
 /// <see cref="NEXMediatorServiceConfiguration"/> — never touches an
 /// <see cref="IServiceProvider"/>, so it captures no runtime state.
 /// </summary>
@@ -34,7 +34,7 @@ internal static class ServiceRegistrar
 
         // Registering the processor implementations as services is independent
         // of wiring RequestPreProcessorBehavior/RequestPostProcessorBehavior
-        // into the pipeline — see MediatRServiceConfiguration.AutoRegisterRequestProcessors.
+        // into the pipeline — see NEXMediatorServiceConfiguration.AutoRegisterRequestProcessors.
         if (configuration.AutoRegisterRequestProcessors)
         {
             AssemblyScanner.ConnectClosedInterfaceImplementations(typeof(IRequestPreProcessor<>), services, candidateTypes, addIfAlreadyExists: true);
@@ -78,7 +78,7 @@ internal static class ServiceRegistrar
     public static void AddRequiredServices(IServiceCollection services, NEXMediatorServiceConfiguration configuration)
     {
         // TryAdd so a consumer's own IMediator/ISender/IPublisher registration
-        // (made before or after calling AddMediatR) is never overridden.
+        // (made before or after calling AddNEXMediator) is never overridden.
         services.TryAdd(new ServiceDescriptor(typeof(IMediator), configuration.MediatorImplementationType, configuration.Lifetime));
         services.TryAdd(new ServiceDescriptor(typeof(ISender), sp => sp.GetRequiredService<IMediator>(), configuration.Lifetime));
         services.TryAdd(new ServiceDescriptor(typeof(IPublisher), sp => sp.GetRequiredService<IMediator>(), configuration.Lifetime));

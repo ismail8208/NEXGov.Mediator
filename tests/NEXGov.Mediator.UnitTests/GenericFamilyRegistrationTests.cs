@@ -32,7 +32,16 @@ public class GenericFamilyRegistrationTests
             // here for the same reason GenericHandlerRegistrationTests excludes them — an
             // unconstrained candidate would otherwise sweep in every class in this shared
             // assembly and exceed the default safety limits, unrelated to anything under test.
-            cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>) && type != typeof(GenericNumberStreamHandler<>);
+            // GenericPreProcessor<TRequest>/GenericPostProcessor<TRequest,TResponse>
+            // (AdvancedRegistrationFixtures.cs, MED-011) are exact-identity-mapped open
+            // generic processors that MED-023's unconditional open-to-open mechanism now
+            // registers automatically whenever AutoRegisterRequestProcessors is true — they
+            // would apply to every request type used in this file's own tests below, unless
+            // excluded here too.
+            cfg.TypeEvaluator = type => type != typeof(OpenGenericHandler<>)
+                && type != typeof(GenericNumberStreamHandler<>)
+                && type != typeof(GenericPreProcessor<>)
+                && type != typeof(GenericPostProcessor<,>);
 
             configure?.Invoke(cfg);
         });

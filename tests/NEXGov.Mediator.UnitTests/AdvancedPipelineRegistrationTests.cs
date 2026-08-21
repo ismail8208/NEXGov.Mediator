@@ -161,6 +161,15 @@ public class AdvancedPipelineRegistrationTests
         {
             cfg.AutoRegisterRequestProcessors = true;
             cfg.AddRequestPreProcessor<ScannedPreProcessor>();
+
+            // GenericPreProcessor<TRequest>/GenericPostProcessor<TRequest,TResponse>
+            // (AdvancedRegistrationFixtures.cs, MED-011) are exact-identity-mapped open
+            // generic processors — with AutoRegisterRequestProcessors true, MED-023's
+            // unconditional open-to-open mechanism now registers them automatically, and
+            // they genuinely apply to every request type, unrelated to anything under test
+            // here — excluded for the same reason MED-022 excludes unrelated unconstrained
+            // generic fixtures elsewhere.
+            cfg.TypeEvaluator = type => type != typeof(GenericPreProcessor<>) && type != typeof(GenericPostProcessor<,>);
         });
         using var _ = provider;
         var sender = provider.GetRequiredService<ISender>();

@@ -288,6 +288,14 @@ public class AddMediatRTests
         {
             cfg.RegisterServicesFromAssemblyContaining<ScanningTestMarker>();
             cfg.AutoRegisterRequestProcessors = true;
+
+            // GenericPreProcessor<TRequest> (AdvancedRegistrationFixtures.cs, MED-011) is an
+            // exact-identity-mapped open generic IRequestPreProcessor<TRequest> — with
+            // AutoRegisterRequestProcessors true, MED-023's unconditional open-to-open
+            // mechanism now registers it automatically (and it genuinely applies to every
+            // request type, unrelated to anything under test here) — excluded for the same
+            // reason MED-022 excludes unrelated unconstrained generic fixtures elsewhere.
+            cfg.TypeEvaluator = type => type != typeof(GenericPreProcessor<>) && type != typeof(GenericPostProcessor<,>);
         });
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestPreProcessorBehavior<,>));
         using var provider = services.BuildServiceProvider();

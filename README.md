@@ -194,16 +194,29 @@ every open-generic implementation across every one of these families is
 evaluated against every other candidate type in the scanned assemblies —
 and that work is bounded by the same `MaxGenericTypeParameters`/
 `MaxTypesClosing`/`MaxGenericTypeRegistrations`/`RegistrationTimeout`
-limits regardless of which family is being expanded. See
-[`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the exact
-constraint/limit/timeout semantics — several of them replicate genuinely
-surprising, verified current-MediatR behavior around zero-value limits —
-and [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md) for two
-related, but distinct and still-open, compatibility gaps this flag does
-**not** cover: current MediatR's separate, unconditional (not
-`RegisterGenericHandlers`-gated) open-to-open registration for
-notification/exception/processor families, and `AddOpenBehavior`'s
-nested-generic-response closing pass.
+limits regardless of which family is being expanded.
+
+Separately, and **independently of `RegisterGenericHandlers`** (it works
+even with that flag left at its default `false`), an open-generic
+`INotificationHandler<>`/`IRequestExceptionHandler<,,>`/`IRequestExceptionAction<,>`
+implementation (and, when `AutoRegisterRequestProcessors` is `true`,
+`IRequestPreProcessor<>`/`IRequestPostProcessor<,>`) whose own generic
+arity exactly matches the interface's arity is registered automatically,
+still open, letting Microsoft.Extensions.DependencyInjection close it
+natively — a genuinely distinct mechanism, not a variant of
+`RegisterGenericHandlers`. This only works for a direct identity mapping
+(the implementation's type parameter used exactly as the notification/request
+type itself, e.g. `Handler<T> : INotificationHandler<T>`); a wrapped
+mapping (e.g. `INotificationHandler<Envelope<T>>`) needs
+`RegisterGenericHandlers` instead.
+
+See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the exact
+constraint/limit/timeout/arity semantics of both mechanisms — several of
+them replicate genuinely surprising, verified current-MediatR behavior —
+and [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md) for
+the one remaining, distinct, still-open compatibility gap neither
+mechanism covers: `AddOpenBehavior`'s nested-generic-response closing
+pass.
 
 ## Compatibility goal
 
@@ -268,9 +281,13 @@ is used as a compatibility reference.
       implemented for request handlers only in MED-013, generalized in
       MED-022 to every family current MediatR itself drives through the
       same shared closing algorithm — notification handlers, stream
-      handlers, exception handlers/actions, and pre/post processors — see
-      `docs/COMPATIBILITY-AUDIT.md` for the two newly discovered,
-      still-open, unrelated gaps this does not cover)
+      handlers, exception handlers/actions, and pre/post processors)
+- [x] Unconditional open-to-open generic registration (MED-023, a
+      mechanism distinct from `RegisterGenericHandlers` — notification
+      handlers, exception handlers/actions, and, when
+      `AutoRegisterRequestProcessors` is `true`, pre/post processors — see
+      `docs/COMPATIBILITY-AUDIT.md` for the one remaining, unrelated gap
+      neither generic-registration mechanism covers)
 - [x] Void-request `Unit` typing and current handler-proximity exception
       ordering
 - [x] Streaming requests (`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,

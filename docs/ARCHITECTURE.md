@@ -575,9 +575,9 @@ internal `GenericHandlerRegistrar`. Called once from
   parameters are scanned only from `MediatRServiceConfiguration.AssembliesToRegister`
   — never `AppDomain.CurrentDomain.GetAssemblies()` — for every family,
   unchanged from MED-013.
-- **A second, unconditional mechanism in current source is a different
-  feature, not part of this one, and remains unimplemented.** Current
-  MediatR also registers a matching open-generic
+- **A second, unconditional mechanism in current source is a genuinely
+  different feature, not part of this one.** Current MediatR also
+  registers a matching open-generic
   `INotificationHandler<>`/exception handler/action/pre-post-processor
   implementation directly against its own open service interface (an
   "open-to-open" registration current source's `AddMediatRClasses` always
@@ -586,7 +586,54 @@ internal `GenericHandlerRegistrar`. Called once from
   enumerates closing candidates or produces eagerly-closed registrations
   at all; it simply hands the still-open implementation to
   Microsoft.Extensions.DependencyInjection's own native generic closing.
-  MED-022 did not implement this — see `docs/COMPATIBILITY-AUDIT.md`.
+  Implemented separately in MED-023 — see "Unconditional open-to-open
+  registration principles" below, and `docs/COMPATIBILITY-AUDIT.md`.
+
+## Unconditional open-to-open registration principles
+
+Introduced in MED-023, via the internal `OpenGenericHandlerRegistrar`,
+called once from `ServiceRegistrar.AddMediatRClasses` alongside (but
+independently of) `GenericHandlerRegistrar` above.
+
+- **Distinct from `RegisterGenericHandlers`, not a variant of it.** Runs
+  unconditionally — `RegisterGenericHandlers` left at its default
+  `false` is sufficient; the flag has no bearing on this mechanism at
+  all. Pre/post processors remain governed by
+  `AutoRegisterRequestProcessors`, exactly like their ordinary closed
+  scanning already is — that gate is shared, the two mechanisms
+  otherwise are not.
+- **Stores an open service → open implementation descriptor; it never
+  enumerates concrete closing candidates.** `GenericHandlerRegistrar`
+  reads candidate types satisfying an implementation's own generic
+  constraints and eagerly builds N closed `Type`s via
+  `Type.MakeGenericType`; this mechanism does neither — it registers the
+  implementation type exactly as declared (still open,
+  `services.AddTransient(openService, openImplementation)`) and performs
+  no candidate scanning of its own beyond finding eligible
+  implementations themselves.
+- **Microsoft.Extensions.DependencyInjection performs the closing, later,
+  per resolution.** Whether a given concrete closed type is ever actually
+  constructed from this registration is entirely up to MS.DI's own
+  native open-generic resolution at the moment something asks for it —
+  this project's registration code has no further involvement and no
+  visibility into which concrete types end up resolved.
+- **Eligibility is a pure arity check, not a semantic one.** An
+  implementation qualifies when its own declared generic arity exactly
+  equals the target open service interface's arity — current source
+  performs no deeper "is this actually an identity mapping" validation,
+  and neither does this implementation. A non-identity mapping (the
+  implementation's type parameter used only indirectly, e.g. nested
+  inside another generic type) still registers, but is then permanently
+  unreachable at resolution time, because MS.DI's own positional
+  substitution can never produce a matching closed interface for it —
+  verified empirically, not assumed.
+- **Every eligible participating family is expanded through this exact
+  same mechanism.** `INotificationHandler<>`,
+  `IRequestExceptionHandler<,,>`, `IRequestExceptionAction<,>`, and (when
+  `AutoRegisterRequestProcessors` is also `true`)
+  `IRequestPreProcessor<>`/`IRequestPostProcessor<,>` — never request or
+  stream handlers, which current source's own participating-family list
+  excludes.
 
 ## Streaming contract principles
 

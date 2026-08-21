@@ -65,6 +65,14 @@ internal static class ServiceRegistrar
         // parameters, which the scanning above always excludes) — see
         // GenericHandlerRegistrar for the algorithm and its verified quirks.
         GenericHandlerRegistrar.Register(services, configuration, assembliesToScan);
+
+        // Unconditional open-to-open registration (MED-023) — a third, independent
+        // mechanism from both the ordinary closed scanning above and GenericHandlerRegistrar:
+        // it registers an eligible open-generic implementation directly against its own open
+        // service interface, unconditionally (not gated on RegisterGenericHandlers at all),
+        // deferring all closing to Microsoft.Extensions.DependencyInjection's own native
+        // generic-service resolution — see OpenGenericHandlerRegistrar for the algorithm.
+        OpenGenericHandlerRegistrar.Register(services, configuration, assembliesToScan);
     }
 
     public static void AddRequiredServices(IServiceCollection services, MediatRServiceConfiguration configuration)

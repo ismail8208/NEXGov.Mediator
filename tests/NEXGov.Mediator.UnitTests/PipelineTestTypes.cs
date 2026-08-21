@@ -167,6 +167,31 @@ internal sealed class CancellationReplacingBehavior : IPipelineBehavior<Ping, Po
     }
 }
 
+// MED-025: calls next() with no argument, exactly like every AddOpenBehavior
+// registered by the live JasonTaylorDev/CleanArchitecture template's own
+// behaviors (AuthorizationBehaviour, ValidationBehaviour, PerformanceBehaviour,
+// UnhandledExceptionBehaviour all do this) — RequestHandlerDelegate<TResponse>'s
+// own `CancellationToken cancellationToken = default` default parameter makes
+// this a legitimate, common authoring pattern that current MediatR's own
+// RequestHandlerWrapperImpl silently corrects back to the original Send-level
+// token at every pipeline hop.
+internal sealed class BareNextBehavior : IPipelineBehavior<Ping, Pong>
+{
+    public Task<Pong> Handle(Ping request, RequestHandlerDelegate<Pong> next, CancellationToken cancellationToken)
+    {
+        return next();
+    }
+}
+
+// MED-025: void-pipeline counterpart of BareNextBehavior above.
+internal sealed class BareNextVoidBehavior : IPipelineBehavior<PingCommand, Unit>
+{
+    public Task<Unit> Handle(PingCommand request, RequestHandlerDelegate<Unit> next, CancellationToken cancellationToken)
+    {
+        return next();
+    }
+}
+
 internal sealed class ExceptionObservingBehavior : IPipelineBehavior<Ping, Pong>
 {
     private readonly List<string> _log;

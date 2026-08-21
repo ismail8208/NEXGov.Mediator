@@ -223,13 +223,19 @@ See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the exact
 constraint/limit/timeout/arity semantics of all three mechanisms —
 several of them replicate genuinely surprising, verified current-MediatR
 behavior — and [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)
-for the point-in-time gap analysis (no known P2 functional compatibility
-gaps remain as of MED-024).
+for the point-in-time gap analysis and the documented exclusions/deviations
+that keep this a **near drop-in** claim rather than an absolute one. No
+known P0, P1, or P2 compatibility gaps remain as of MED-026; a small
+number of deliberate, documented P3 deviations and the permanently
+excluded commercial-licensing subsystem are why this remains LEVEL 4
+("near drop-in with documented exclusions/deviations") rather than a
+LEVEL 5 "drop-in" claim — see that document's Compatibility Claim section.
 
 ## Compatibility goal
 
-NEXGov.Mediator's design goal is to be a **source-compatible alternative
-to MediatR** for a defined, supported subset of the API surface. Where an
+NEXGov.Mediator's design goal is to be a **near drop-in, source-compatible
+alternative to MediatR** for a defined, supported subset of the API
+surface — not a claim of literal 100% MediatR parity. Where an
 application uses a supported request/handler, notification, pipeline, or
 dependency-injection pattern, migrating should be, in principle, a
 namespace change:
@@ -244,16 +250,23 @@ becomes
 using NEXGov.Mediator;
 ```
 
-with the surrounding code otherwise unchanged.
+with the surrounding code otherwise unchanged. This is independently
+verified end to end against the current `jasontaylordev/CleanArchitecture`
+reference template's actual `AddMediatR` usage (see
+[`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)'s
+CleanArchitecture Migration Status), not merely assumed from the API
+shape matching.
 
-This is a compatibility **goal**, not a completed guarantee. See
+This is a compatibility **goal**, not a claim of exhaustive parity. See
 [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the current
 compatibility matrix, [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)
-for the point-in-time gap analysis against current MediatR (what's
-missing, what's intentionally excluded, and the recommended V1 scope),
-and [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the
-architectural principles guiding the implementation. An API family is
-only considered compatible once it has passing tests demonstrating it.
+for the point-in-time gap analysis against current MediatR — including
+the documented exclusions and deviations (what's missing, what's
+intentionally excluded, and the recommended V1 scope) that any consumer
+relying on more than the documented core subset should read first — and
+[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the architectural
+principles guiding the implementation. An API family is only considered
+compatible once it has passing tests demonstrating it.
 
 **NEXGov.Mediator is not MediatR.** It is a clean-room implementation:
 no source code from MediatR or any other mediator library has been
@@ -295,8 +308,20 @@ is used as a compatibility reference.
       handlers, exception handlers/actions, and, when
       `AutoRegisterRequestProcessors` is `true`, pre/post processors)
 - [x] `AddOpenBehavior` nested-generic-response closing (MED-024, a
-      fourth, independent mechanism — closes the last known P2 functional
-      compatibility gap; see `docs/COMPATIBILITY-AUDIT.md`)
+      fourth, independent mechanism; see `docs/COMPATIBILITY-AUDIT.md`)
+- [x] Final compatibility audit against a pinned current-upstream commit
+      (MED-025) — independently re-verified the entire project, found and
+      fixed a P1 cancellation-forwarding defect (a behavior calling
+      `next()` with no argument, as the CleanArchitecture reference
+      template's own behaviors do, no longer silently loses the real
+      cancellation token), and assigned a documented Compatibility LEVEL
+      4 claim
+- [x] `NotificationHandler<TNotification>` synchronous-handler convenience
+      class (MED-026, closing the one P2 gap MED-025 found; discovered
+      automatically by existing `AddMediatR` scanning with no scanner
+      changes needed). No known P0, P1, or P2 compatibility gaps remain;
+      see `docs/COMPATIBILITY-AUDIT.md` for the remaining documented P3
+      deviations/exclusions and the explicit LEVEL 4 reassessment
 - [x] Void-request `Unit` typing and current handler-proximity exception
       ordering
 - [x] Streaming requests (`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,

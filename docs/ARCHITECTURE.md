@@ -227,6 +227,16 @@ every `Send` dispatch path.
   behavior; each behavior decides what token to pass to `next` (typically
   the one it received, but it may deliberately substitute a different
   one, which downstream behaviors and the handler then observe instead).
+  **A behavior calling `next()` with no argument is not the same as
+  substituting `CancellationToken.None`**: `RequestHandlerDelegate<TResponse>`'s
+  own default parameter (`CancellationToken cancellationToken = default`)
+  makes a bare `next()` call a legitimate, common authoring pattern (used
+  throughout the current `jasontaylordev/CleanArchitecture` reference
+  template's own behaviors), so every link in the composed pipeline
+  normalizes a `default` token it receives back to the original outer
+  `Send`-level token before using it — matching current MediatR's own
+  verified composition (MED-025) — rather than letting a bare `next()`
+  call silently degrade the rest of the pipeline to `CancellationToken.None`.
 - **Void (`IRequest`) pipelines reuse the same machinery internally**
   against the public `Unit` type (MED-014), so a consumer can author a
   closed pipeline behavior/post-processor/exception handler that targets a
@@ -400,6 +410,15 @@ MediatR's own placement), and the internal `ServiceRegistrar`/`AssemblyScanner`.
   concrete (non-abstract, non-open-generic) form is ever a scan candidate,
   so an abstract intermediate base is never itself registered even when it
   implements the closed interface directly; its concrete descendants are.
+  **This principle needed no changes to support `NotificationHandler<TNotification>`
+  (MED-026):** a concrete class deriving from that public abstract
+  convenience base class reaches `INotificationHandler<TNotification>`
+  purely through this same transitive `Type.GetInterfaces()` closure (an
+  abstract intermediate base implementing the interface, exactly the
+  shape this bullet already covers) — confirming this scanning design was
+  general enough to support a public type added four MED tasks later
+  without any scanner/registration code change, verified by a dedicated
+  integration test rather than assumed.
 - **`IServiceProvider` remains the runtime resolution boundary.**
   Scanning only populates the `IServiceCollection`; every scanned handler
   is still resolved through the provider at dispatch time, exactly like a
@@ -555,9 +574,14 @@ internal `GenericHandlerRegistrar`. Called once from
   for each (candidate, interface) pairing, not as one running total across
   a family or across the whole registration phase; one shared
   `RegistrationTimeout` bounds the whole expansion, across every family
-  together. All four faithfully replicate current source's exact verified
-  semantics, including its non-obvious zero-value quirks — see
-  `docs/COMPATIBILITY.md` for the precise behavior of each.
+  together — **uniformly, deliberately more thoroughly than current
+  source itself, which only threads its own shared timeout token through
+  the `IRequestHandler<,>`/`IRequestHandler<>` families and leaves every
+  other family's combination generation unable to observe it at all
+  (MED-025 finding)**. `MaxGenericTypeParameters`/`MaxTypesClosing`/
+  `MaxGenericTypeRegistrations` faithfully replicate current source's
+  exact verified semantics, including its non-obvious zero-value quirks —
+  see `docs/COMPATIBILITY.md` for the precise behavior of each.
 - **Generated registrations remain DI-owned, and duplicate semantics stay
   family-agnostic.** Every closed registration is an ordinary
   `services.AddTransient(serviceType, implementationType)` call —

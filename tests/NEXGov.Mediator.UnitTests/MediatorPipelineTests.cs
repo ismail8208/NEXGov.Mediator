@@ -177,6 +177,28 @@ public class MediatorPipelineTests
         Assert.NotEqual(originalCts.Token, handler.ReceivedToken);
     }
 
+    // MED-025: a behavior calling next() with no argument (as every behavior in the live
+    // JasonTaylorDev/CleanArchitecture template's AddOpenBehavior registrations does) must not
+    // silently degrade the rest of the pipeline — including the handler itself — to
+    // CancellationToken.None. Verified against current MediatR source: its own
+    // RequestHandlerWrapperImpl composition normalizes a default token back to the original
+    // Send-level token at every hop for exactly this reason.
+    [Fact]
+    public async Task ResponsePipeline_BehaviorCallsNextWithNoArgument_OriginalCancellationTokenStillReachesHandler()
+    {
+        var handler = new PingHandler();
+        var mediator = CreateMediator(s =>
+        {
+            s.AddSingleton<IRequestHandler<Ping, Pong>>(handler);
+            s.AddSingleton<IPipelineBehavior<Ping, Pong>, BareNextBehavior>();
+        });
+        using var cts = new CancellationTokenSource();
+
+        await mediator.Send(new Ping("hi"), cts.Token);
+
+        Assert.Equal(cts.Token, handler.ReceivedToken);
+    }
+
     // --- Exceptions ---
 
     [Fact]
@@ -359,6 +381,24 @@ public class MediatorPipelineTests
         await mediator.Send(new PingCommand("hi"), cts.Token);
 
         Assert.Equal(cts.Token, log.FirstReceivedToken);
+        Assert.Equal(cts.Token, handler.ReceivedToken);
+    }
+
+    // MED-025: void-pipeline counterpart of
+    // ResponsePipeline_BehaviorCallsNextWithNoArgument_OriginalCancellationTokenStillReachesHandler.
+    [Fact]
+    public async Task VoidPipeline_BehaviorCallsNextWithNoArgument_OriginalCancellationTokenStillReachesHandler()
+    {
+        var handler = new PingCommandHandler();
+        var mediator = CreateMediator(s =>
+        {
+            s.AddSingleton<IRequestHandler<PingCommand>>(handler);
+            s.AddSingleton<IPipelineBehavior<PingCommand, Unit>, BareNextVoidBehavior>();
+        });
+        using var cts = new CancellationTokenSource();
+
+        await mediator.Send(new PingCommand("hi"), cts.Token);
+
         Assert.Equal(cts.Token, handler.ReceivedToken);
     }
 

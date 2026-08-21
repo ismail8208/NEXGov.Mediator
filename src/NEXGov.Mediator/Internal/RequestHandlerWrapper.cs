@@ -55,7 +55,16 @@ internal sealed class RequestHandlerWrapperImpl<TRequest, TResponse> : RequestHa
 
         var typedRequest = (TRequest)request;
 
-        RequestHandlerDelegate<TResponse> pipeline = ct => handler.Handle(typedRequest, ct);
+        // RequestHandlerDelegate<TResponse> declares `CancellationToken cancellationToken =
+        // default`, so a behavior is free to call `next()` with no argument (the current
+        // JasonTaylorDev/CleanArchitecture template's own behaviors all do exactly this).
+        // Every link in this chain therefore normalizes a `default` token it receives back to
+        // the original outer `cancellationToken` before using it, matching current MediatR's own
+        // verified RequestHandlerWrapperImpl composition exactly (its Aggregate closures apply
+        // the identical `t == default ? cancellationToken : t` substitution at every hop) — a
+        // bare `next()` call anywhere in the chain must not silently degrade the rest of the
+        // pipeline (including the handler itself) to CancellationToken.None.
+        RequestHandlerDelegate<TResponse> pipeline = ct => handler.Handle(typedRequest, ct == default ? cancellationToken : ct);
 
         if (serviceProvider.GetService(typeof(IEnumerable<IPipelineBehavior<TRequest, TResponse>>))
             is IEnumerable<IPipelineBehavior<TRequest, TResponse>> behaviors)
@@ -70,7 +79,7 @@ internal sealed class RequestHandlerWrapperImpl<TRequest, TResponse> : RequestHa
             {
                 var next = pipeline;
                 var behavior = behaviorArray[i];
-                pipeline = ct => behavior.Handle(typedRequest, next, ct);
+                pipeline = ct => behavior.Handle(typedRequest, next, ct == default ? cancellationToken : ct);
             }
         }
 
@@ -106,9 +115,11 @@ internal sealed class RequestHandlerWrapperImpl<TRequest> : RequestHandlerWrappe
 
         var typedRequest = (TRequest)request;
 
+        // See the response-producing overload above for why every link here normalizes a
+        // `default` token it receives back to the original outer `cancellationToken`.
         RequestHandlerDelegate<Unit> pipeline = async ct =>
         {
-            await handler.Handle(typedRequest, ct).ConfigureAwait(false);
+            await handler.Handle(typedRequest, ct == default ? cancellationToken : ct).ConfigureAwait(false);
             return Unit.Value;
         };
 
@@ -121,7 +132,7 @@ internal sealed class RequestHandlerWrapperImpl<TRequest> : RequestHandlerWrappe
             {
                 var next = pipeline;
                 var behavior = behaviorArray[i];
-                pipeline = ct => behavior.Handle(typedRequest, next, ct);
+                pipeline = ct => behavior.Handle(typedRequest, next, ct == default ? cancellationToken : ct);
             }
         }
 

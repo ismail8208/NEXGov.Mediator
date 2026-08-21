@@ -1,23 +1,34 @@
 # NEXGov.Mediator Compatibility Audit
 
-MED-016. This is an audit, not an implementation task — see `docs/COMPATIBILITY.md`
+This is an audit, not an implementation task — see `docs/COMPATIBILITY.md`
 for the maintained, row-by-row compatibility matrix this audit cross-checks
-and corrects. This document is the point-in-time gap analysis; the matrix
-remains the living reference.
+and corrects, and `docs/UPSTREAM-AUDIT.md` for the exact upstream evidence
+(files fetched, quirks found) backing every claim in this document. This
+document is the point-in-time gap analysis and, as of MED-025, the
+authoritative V1 compatibility-claim summary; the matrix remains the
+living, row-level reference.
+
+**Originally created in MED-016; independently re-audited from scratch in
+MED-025 (2026-08-21) against a freshly pinned upstream commit — see
+Target below — rather than trusting or extending the MED-016..MED-024
+version of this document. Every claim carried forward from that lineage
+was re-verified against current source in MED-025, not merely retained.
+MED-026 (2026-08-21, same day) closed the one P2 gap MED-025 found
+(`NotificationHandler<TNotification>`), re-confirming the pinned commit
+below was still current `main` at that time.**
 
 ## Target
 
-Audited against the MediatR `master` branch HEAD, verified via direct
-`raw.githubusercontent.com` source fetches (not memory, not an assumed
-version) across this project's entire history (MED-001 through MED-016).
-The exact commit SHA of `master` could not be retrieved through available
-tooling (GitHub's commit/ref API endpoints returned `404`/`422` for this
-audit's fetch attempts, while `contents`/`tags` endpoints and raw file
-fetches worked normally). The nearest tagged release is **v14.2.0**
-(confirmed via `GET /repos/jbogard/MediatR/tags`); no diff between that tag
-and `master` was confirmable, so this audit treats v14.2.0 as the
-practical version anchor while noting the actual fetches were against
-`master`.
+Audited against `LuckyPennySoftware/MediatR` (canonical location —
+`jbogard/MediatR` HTTP-redirects there) `main` branch, commit
+**`916ef1b3d68ccdc96db8f914eaf1b32fc7db52c5`** (2026-07-02) — a specific,
+reproducible SHA, verified via direct `raw.githubusercontent.com` source
+fetches of every production source file (not memory, not `mediatr.io`,
+not the pre-existing compatibility docs). See `docs/UPSTREAM-AUDIT.md`
+for the full file list and audit date (2026-08-21). MED-001 through
+MED-016's original audit targeted `master` HEAD at the time with no
+pinned SHA (nearest tag then was v14.2.0); MED-025 supersedes that with a
+pinned, reproducible commit.
 
 Package split (verified via `MediatR.csproj`):
 - **MediatR** — core library; depends on `MediatR.Contracts [2.0.1, 3.0.0)`,
@@ -98,18 +109,79 @@ current source's `AddRequiredServices` now requires), source generators,
 and AOT-specific redesign remain intentionally excluded (P3), matching
 this project's established, repeatedly-stated policy.
 
+**MED-025's independent re-audit found and fixed one severe, previously
+undetected defect**: `RequestHandlerWrapper.cs`'s pipeline composition did
+not restore the original `Send`-level `CancellationToken` when a behavior
+called `next()` with no argument — a legitimate, common pattern
+(`RequestHandlerDelegate<TResponse>` itself declares `CancellationToken
+cancellationToken = default`) that current source's own composition
+silently self-heals at every pipeline hop. Verified against the live
+`jasontaylordev/CleanArchitecture` template — this project's own flagship
+migration target — that **all four** of its `AddOpenBehavior`-registered
+behaviors call `next()` this exact way, meaning any real cancellation
+token passed to `Send(...)` was silently downgraded to
+`CancellationToken.None` for the rest of the pipeline (including the
+handler) under that template's actual usage pattern. Classified P1
+(breaks the ordinary/flagship migration scenario, silently — no exception,
+no failing functional test, only broken cancellation) and fixed within
+MED-025 itself per its own special-implementation rule (P1, small,
+isolated, no new public API, unsafe to defer). See "Pipeline Audit" and
+the Difference Table below for the full evidence trail. MED-025 also
+found: a deliberate, documented deviation in `Send(object)`'s ambiguous
+multi-`IRequest<TResponse>` handling (current source silently picks the
+first interface found; this project throws — Category E, P3); a missing
+public `NotificationHandler<TNotification>` convenience class (Category
+F, P2); and an unreproduced `RegistrationTimeout` per-family
+cancellation-propagation quirk in current source itself, which this
+project does not replicate because doing so would only make its own
+timeout *less* protective for no compatibility benefit (Category H, P3).
+None of the P2/P3 items are release blockers; see Release-Blocker
+Decision below.
+
+**MED-026 closed the one P2 gap MED-025 found**: `NotificationHandler<TNotification>`
+is now implemented, re-verified against the exact upstream commit MED-025
+pinned (`916ef1b3d68ccdc96db8f914eaf1b32fc7db52c5` — confirmed unchanged
+on `main` at MED-026 time), including its non-obvious shape (explicit
+interface implementation, protected default constructor, no
+`CancellationToken` forwarding, unwrapped exception propagation) and
+proven to be discovered by `AddMediatR`'s existing assembly scanning with
+**zero scanner/registration production-code changes** — MED-012's
+transitive interface-closure discovery already covers it. **This does not
+by itself move the Compatibility Claim to LEVEL 5** — see Compatibility
+Claim below for the explicit reassessment; a zero P0/P1/P2 count is
+necessary but not sufficient for a "drop-in" claim, since the documented
+P3 deviations (`Send(object)` ambiguity handling, the `Array.Sort`
+tie-break difference, the `RegistrationTimeout` propagation difference)
+and the permanently-excluded licensing subsystem remain real, observable
+differences.
+
 For the specific, real, currently-fetched MediatR usage pattern of the
 Jason Taylor CleanArchitecture reference template, every API call used is
-already implemented and tested — see "CleanArchitecture Migration
-Status" below.
+already implemented and tested, and the cancellation-forwarding defect
+above — which that exact template's behaviors would have triggered — is
+now fixed — see "CleanArchitecture Migration Status" below.
 
-No public API leak was found: the production assembly exposes exactly 27
-public types, all deliberate and all documented; every internal type is
-correctly under the `NEXGov.Mediator.Internal` namespace and covered by an
-existing broad compatibility test. Package metadata has real,
-expected-at-this-stage gaps (no explicit version, authors, or repository
-URL) that must be resolved before any NuGet release but do not affect API
-compatibility.
+No unintended public API leak was found: the production assembly exposes
+exactly 36 public types (grown from 27 at MED-016 as MED-017 through
+MED-021 added streaming/notification-publisher/`AddOpenBehaviors`
+surface, and MED-026 added `NotificationHandler<TNotification>`), all
+deliberate, all covered by `PublicApiSurfaceCompatibilityTests`, and
+every internal type is correctly under the `NEXGov.Mediator.Internal`
+namespace. **MED-025 found one genuine gap in the other direction**
+(current source's public `NotificationHandler<TNotification>`
+synchronous-handler convenience class had no NEXGov.Mediator equivalent)
+**which MED-026 closed** — see Fully Compatible Core below. **MED-025
+also corrects a stale MED-016 claim**: package metadata
+(version, authors, repository URL, license, description, XML docs,
+README) is fully populated — inspecting the actual built
+`NEXGov.Mediator.1.0.0.nupkg` confirms `<version>1.0.0</version>`,
+`<authors>`, `<repository>` (with commit SHA), `<license
+type="expression">MIT</license>`, and a bundled `README.md` are all
+present; this was not the case at MED-016 and the doc had not been
+updated since. The only remaining packaging-polish gap (not a
+compatibility gap) is the absence of a `.snupkg` symbol package /
+SourceLink debugging metadata — release-readiness debt, not a MediatR
+API-compatibility concern.
 
 ## Fully Compatible Core
 
@@ -155,6 +227,7 @@ re-confirmed here:
 | `RequestExceptionActionProcessorStrategy` | Enum, two members, default `ApplyForUnhandledExceptions`. |
 | `INotificationPublisher` | `Task Publish(IEnumerable<NotificationHandlerExecutor>, INotification, CancellationToken)`, namespace `NEXGov.Mediator`. `Mediator.Publish` resolves handlers, builds executors, and delegates entirely to this — `Mediator` retains no execution-strategy logic of its own. Implemented in MED-020. |
 | `NotificationHandlerExecutor` | `public record NotificationHandlerExecutor(object HandlerInstance, Func<INotification, CancellationToken, Task> HandlerCallback)` — positional record, verified exactly against current source. Implemented in MED-020. |
+| `NotificationHandler<TNotification>` | Public abstract synchronous-handler convenience class, verified against the exact MED-025-pinned commit (re-confirmed unchanged at MED-026 time): implements `INotificationHandler<TNotification>` via explicit interface implementation (reachable only through the interface, never the class type directly), default constructor is `protected` (compiler-supplied, since no explicit constructor is declared and the class is abstract), `TNotification` carries no variance annotation (illegal on a class type parameter) constrained to `INotification`. The explicit `Handle(TNotification, CancellationToken)` calls a `protected abstract void Handle(TNotification)` extension point and returns `Task.CompletedTask` — the `CancellationToken` parameter is never referenced, verified against source (a cancelled token is silently ignored, not forwarded). Discovered by `AddMediatR`'s existing assembly scanning with zero scanner/registration changes, via MED-012's transitive interface-closure discovery. Implemented in MED-026 (discovered as a gap during MED-025's independent re-audit). |
 | `ForeachAwaitPublisher` / `TaskWhenAllPublisher` | Namespace `NEXGov.Mediator.NotificationPublishers`; sequential (default) vs. concurrent `Task.WhenAll`-based strategies, both verified against current source including exact exception-propagation semantics (sequential: stops at first exception; concurrent: all handlers run, `await` surfaces one exception via standard unwrapping). Implemented in MED-020. |
 | `Mediator` constructors | `Mediator(IServiceProvider)` (delegates to the second overload with `new ForeachAwaitPublisher()`) and `Mediator(IServiceProvider, INotificationPublisher)` — both verified against current source and implemented. `AddMediatR` registers `INotificationPublisher` alongside `IMediator`; ordinary Microsoft.Extensions.DependencyInjection constructor selection (prefers the most-satisfiable-parameters constructor) then automatically picks the two-parameter overload — no custom Mediator-construction logic needed, matching how current MediatR itself achieves this. A `protected virtual PublishCore(...)` extensibility hook (verified against current source) is also implemented. Implemented in MED-020. |
 | `RegisterGenericHandlers` scope | Verified current MediatR applies this to every scanned family through one shared `ConnectImplementationsToTypesClosing` mechanism: request handlers, notification handlers, exception handlers/actions, pre/post processors (gated additionally on `AutoRegisterRequestProcessors`, matching that flag's ordinary-scanning gate), and stream handlers. NEXGov.Mediator applied it to `IRequestHandler<,>`/`IRequestHandler<>` only in MED-013; **MED-022 generalized the same shared closure engine to every one of those families**, verified by dedicated per-family tests. One MED-022 improvement over current source itself, not merely a port of it: current source's own non-primary-argument derivation (an `IRequest<TResponse>` lookup on the closed request type) crashes or misbehaves for every family except `IRequestHandler<,>`; this implementation substitutes the same per-parameter bindings into every generic argument position instead, which is strictly more general and produces correct, working registrations for these families rather than reproducing current source's own crash — see the `AddMediatR(...)` row in `docs/COMPATIBILITY.md` for the full, verified explanation. |
@@ -173,13 +246,15 @@ re-confirmed here:
 
 | API / Feature | Current MediatR shape | Practical importance |
 |---|---|---|
-| Commercial licensing (`ILoggerFactory`/`MediatR.Licensing` requirement) | **Newly discovered during MED-022's re-audit.** Current source's `AddRequiredServices` now unconditionally registers `LicenseAccessor`/`LicenseValidator` factories that resolve `ILoggerFactory` from the container and throw `InvalidOperationException` if it is missing — meaning current MediatR's `AddMediatR` itself now requires `services.AddLogging()` to have been called first, regardless of `LicenseKey`. Not replicated, consistent with this project's long-standing `LicenseKey` exclusion (see Intentionally Excluded). | Low for this project's compatibility surface (deliberately excluded), but worth knowing: current MediatR's `AddMediatR` is not usable at all without `ILoggerFactory` registered, independent of any actual license validation. |
+| Commercial licensing (`ILoggerFactory`/`MediatR.Licensing` requirement) | **Refined in MED-025's independent re-audit** (originally discovered during MED-022's re-audit, but imprecisely characterized as an `AddMediatR`-time requirement). Current source's `AddRequiredServices` registers `LicenseAccessor`/`LicenseValidator` as singleton **factories** that resolve `ILoggerFactory` and throw `InvalidOperationException` if it is missing — but the throw is inside the factory delegate, so it does not fire at `AddMediatR` time. It fires lazily, the first time something resolves those services, which happens inside `Mediator`'s own constructor (`_serviceProvider.CheckLicense()`) — i.e. on the first `Send`/`Publish`/`CreateStream`/`GetRequiredService<IMediator>()` call, and on every subsequent one too (the internal `LicenseChecked` flag is only set after a successful resolution). Not replicated, consistent with this project's long-standing `LicenseKey` exclusion (see Intentionally Excluded). | Low for this project's compatibility surface (deliberately excluded). Practical nuance confirmed by re-fetching the live `jasontaylordev/CleanArchitecture` template: it registers MediatR through `IHostApplicationBuilder`, which registers `ILoggerFactory` automatically via the Generic Host — so this requirement does not block that specific real-world migration target. It would block a bare `new ServiceCollection(); services.AddMediatR(...)` setup with no `AddLogging()` call (a common unit-test-style setup) if replicated — which is exactly why it remains excluded. |
 
 **No notification publisher items remain in this section either.** As of MED-020, `INotificationPublisher`, `NotificationHandlerExecutor`, `ForeachAwaitPublisher`/`TaskWhenAllPublisher`, the second `Mediator` constructor, and `NotificationPublisher`/`NotificationPublisherType` are all implemented — see Fully Compatible Core.
 
 **No `AddOpenBehaviors`/`OpenBehavior` item remains in this section either.** As of MED-021, both overloads of `MediatRServiceConfiguration.AddOpenBehaviors` and the `OpenBehavior` type are implemented — see Fully Compatible Core.
 
-The row above (commercial licensing) is the only item remaining in this section, and it is intentionally excluded (P3, see Intentionally Excluded) rather than a tracked gap — every functional compatibility gap this audit has ever tracked (streaming, notification publishing, `AddOpenBehaviors`, generic-family expansion, unconditional open-to-open registration, `AddOpenBehavior` nested-generic-response closing) is now closed.
+**No `NotificationHandler<TNotification>` item remains in this section either.** As of MED-026, that convenience class is implemented — see the corresponding row in Fully Compatible Core. This was the last remaining functional (P2) compatibility gap tracked by this audit.
+
+The row above (commercial licensing) is the only item remaining in this section, and it is intentionally excluded (P3, see Intentionally Excluded) rather than a tracked gap. **No known P0, P1, or P2 functional compatibility gaps remain as of MED-026.** This does not by itself imply LEVEL 5 ("drop-in") parity — see Compatibility Claim below.
 
 ## Intentionally Excluded
 
@@ -248,7 +323,8 @@ Based on this audit, V1 should promise:
 > unconditional open-to-open registration mechanism current source applies
 > outside that flag, and `AddOpenBehavior`'s nested-generic-response
 > closing pass for behaviors whose response is itself a nested generic),
-> and void-request `Unit` typing.
+> void-request `Unit` typing, and the `NotificationHandler<TNotification>`
+> synchronous-handler convenience class.
 
 V1 should **not** promise: any commercial-license-adjacent API (including
 current source's `ILoggerFactory` requirement). This is not "100% of MediatR's
@@ -257,38 +333,160 @@ deliberately targeted and fully verified, sized to the
 CleanArchitecture-style usage pattern that motivated the project (see
 migration status above).
 
+## Difference Table (A–H Classification)
+
+Every difference this audit examined, classified exactly once. **A**
+Exact compatibility, **B** Namespace-only intentional difference, **C**
+Intentional documented V1 exclusion, **D** Harmless internal
+implementation difference, **E** Observable documented compatibility
+deviation, **F** Missing compatibility feature, **G** Defect in
+NEXGov.Mediator, **H** Upstream MediatR quirk/bug intentionally not
+reproduced. Only E–H rows carry a severity (see the table below); A–D
+rows are listed for completeness of the independent re-audit, not because
+they need further action.
+
+| # | Area | NEXGov.Mediator vs. current source | Class | Evidence |
+|---|---|---|---|---|
+| 1 | Contracts (`IBaseRequest`/`IRequest`/`IRequest<>`/`INotification`/`IStreamRequest<>`/`Unit`/`ISender`/`IPublisher`/`IMediator`/`IPipelineBehavior<,>`/`RequestHandlerDelegate<>`/`IStreamPipelineBehavior<,>`/`StreamHandlerDelegate<>`/pre/post-processor and exception contracts/`RequestExceptionHandlerState<>`) | Exact shape match (name, generics, variance, constraints, members) for every contract independently re-enumerated in this audit, namespace difference aside. | A / B | `docs/UPSTREAM-AUDIT.md` §"Independent public API inventory"; direct file-by-file comparison this session. |
+| 2 | `ServiceFactory` | Does not exist in current source (confirmed: no file, no `TypeForwardedTo`); NEXGov.Mediator correctly has no equivalent. | A | `docs/UPSTREAM-AUDIT.md`. |
+| 3 | `MediatRServiceConfiguration` (17 properties, 27 methods) | Exact match, `AssembliesToRegister` correctly `internal` in both. Only difference: `LicenseKey` (excluded, see row 12). | A | Full independent enumeration this session, both sides. |
+| 4 | `AddMediatR` overloads (2), null/no-assembly guard behavior | Exact match, including the *absence* of an explicit null-guard on `configuration` upstream (fails via incidental `NullReferenceException`, not `ArgumentNullException`) — already correctly documented pre-MED-025, re-verified here. | A | `MediatRServiceCollectionExtensions.cs` read in full. |
+| 5 | `RegisterGenericHandlers` closing algorithm (candidate pool, constraints, limits, per-family scope, `MaxGenericTypeRegistrations` gating quirk) | Exact match to the already-documented MED-013/022 characterization, independently re-verified against `ServiceRegistrar.ConnectImplementationsToTypesClosing`/`GetConcreteRequestTypes`/`GenerateCombinations`. | A / D | `ServiceRegistrar.cs` (upstream) vs. `GenericHandlerRegistrar.cs`, read and compared line-by-line this session. |
+| 6 | Unconditional open-to-open registration (`multiOpenInterfaces`, arity-only check, `TypeEvaluator` scope) | Exact match to MED-023's characterization. | A | Same files, `multiOpenInterfaces` loop compared directly. |
+| 7 | Nested-generic-response behavior closing (`HasNestedGenericResponseType`/`RegisterClosedBehaviorsFromAssemblies`/`TryMatchType`) | Exact algorithmic match to MED-024's `ClosedBehaviorRegistrar`, including the deliberate omission of the bare open descriptor for a triggering entry (upstream keeps it; keeping it is verified crash-prone). | A / E | `docs/UPSTREAM-AUDIT.md`; upstream source now quoted verbatim in-repo history via MED-024. |
+| 8 | Exception hierarchy walk, handler-proximity ordering (`HandlersOrderer`/`ObjectDetails` vs. `HandlerPriorityOrderer`/`HandlerTypeDetails`), including the exact non-prefix-anchored `Namespace.Replace(...)` quirk | Exact match, including the "already-overridden" skip-guard upstream has and NEXGov.Mediator omits — traced by hand and confirmed provably equivalent for all inputs (monotonic flag, pure pairwise comparisons). | A / D | `HandlersOrderer.cs`/`ObjectDetails.cs` vs. `HandlerPriorityOrderer.cs`/`HandlerTypeDetails.cs`, read and compared this session. |
+| 9 | Exception tie-break on equal priority (`Array.Sort` instability vs. stable provider-order fallback) | Deliberate, already-documented (MED-015) deviation — `Array.Sort` is not a guaranteed-stable sort and current source specifies no ordering contract for a true tie, so no correct consumer code can depend on a specific outcome. | E | Independently re-verified this session; unchanged conclusion from MED-015. |
+| 10 | `Send(object)` dynamic request-type detection for a type implementing more than one `IRequest<TResponse>` contract | Current source silently uses `FirstOrDefault` over `GetInterfaces()` (unspecified enumeration order, no ambiguity check). NEXGov.Mediator explicitly detects the ambiguity and throws `InvalidOperationException`. **Newly discovered this session** — not previously documented as a deviation (prior docs described NEXGov's own behavior without contrasting it against upstream's actual, different behavior). | E | `Mediator.cs` (upstream) vs. NEXGov `Mediator.cs`, read and compared this session; `docs/UPSTREAM-AUDIT.md` quirk 1. |
+| 11 | Pipeline cancellation-token propagation when a behavior calls `next()` with no argument | **Defect, found and fixed this session.** Current source's `RequestHandlerWrapperImpl` normalizes a `default` token back to the original `Send`-level token at every hop (`t == default ? cancellationToken : t`); NEXGov.Mediator's `RequestHandlerWrapper.cs` did not, silently degrading the rest of the pipeline to `CancellationToken.None`. Verified that all four `AddOpenBehavior` behaviors in the live `jasontaylordev/CleanArchitecture` template call `next()` this exact way. Fixed in this task (see Files Modified in the completion report); two new regression tests added. | G (fixed) | `docs/UPSTREAM-AUDIT.md` quirk 2; `Mediator.cs`/`Wrappers/RequestHandlerWrapper.cs` (upstream) vs. `Internal/RequestHandlerWrapper.cs` (NEXGov, before/after this session's fix). |
+| 12 | `RegistrationTimeout`'s `CancellationToken` propagation per generic-closing family | Current source only threads the shared timeout token through `IRequestHandler<,>`/`IRequestHandler<>`'s closing calls; every other family's combination generation never observes it. NEXGov.Mediator's `GenericHandlerRegistrar` threads it through uniformly to every family — strictly more protective, and this project intentionally does not reproduce the narrower upstream behavior since doing so would only reduce safety with no compatibility benefit. **Newly discovered this session.** | H | `docs/UPSTREAM-AUDIT.md` quirk 3; `ServiceRegistrar.AddMediatRClasses` (upstream) vs. `GenericHandlerRegistrar.Register` (NEXGov). |
+| 13 | Commercial licensing (`LicenseKey`, `ILoggerFactory` requirement, `MediatR.Licensing`) | Permanently, intentionally excluded — stated policy since MED-013. This session refines *when* the `ILoggerFactory` requirement actually surfaces upstream (first `Mediator` construction, not `AddMediatR` time) without changing the exclusion itself. | C | `docs/UPSTREAM-AUDIT.md` quirk 4/5; `Licensing/*.cs`, `ServiceRegistrar.AddRequiredServices`, `MediatRServiceCollectionExtensions.CheckLicense`, all read in full this session. |
+| 14 | `NotificationHandler<TNotification>` (public synchronous-handler convenience abstract class) | **Missing when found during MED-025; implemented and closed in MED-026.** Re-verified against the exact MED-025-pinned commit (unchanged on `main` at MED-026 time): explicit interface implementation, protected default constructor, no `CancellationToken` forwarding, unwrapped exception propagation — all reproduced exactly. Discovered by existing `AddMediatR` scanning with zero scanner/registration production-code changes (MED-012 transitive interface-closure discovery already covers it). | F → A (closed) | `docs/UPSTREAM-AUDIT.md` quirk 7 and its MED-026 update; `NotificationHandler.cs` (NEXGov, new); `PublicApiSurfaceCompatibilityTests`/`NotificationCompatibilityTests` (9 new reflection-based shape tests). |
+| 15 | Source generators, AOT-specific redesign | Out of scope, never targeted by any MED task. | C | Stated policy, unchanged. |
+
+## Severity Table (E/F/G Findings)
+
+| Item (Difference Table #) | Severity | Rationale |
+|---|---|---|
+| #11 — cancellation-token loss on bare `next()` | **P1 → fixed within MED-025** | Silently broke cancellation forwarding under the exact pattern the project's own flagship CleanArchitecture migration target uses, with no exception and no functional test failure — the kind of framework-level correctness guarantee "source-compatible" is meant to promise. Fixed in this task per its own special-implementation rule (P1, small/isolated, no new public API, unsafe to defer to a later task). |
+| #14 — missing `NotificationHandler<TNotification>` | **P2 → closed in MED-026** | Was real but narrow: a legacy/synchronous-handler pattern, not exercised by the CleanArchitecture reference target. Closed via a small, focused follow-up task (MED-026) rather than folded into MED-025 itself (adding a new public type was correctly deferred per MED-025's own special-implementation rule). |
+| #10 — `Send(object)` ambiguity-handling deviation | **P3** | Extremely narrow shape (a request type implementing 2+ `IRequest<TResponse>` contracts simultaneously); NEXGov.Mediator's behavior is arguably safer than upstream's own order-dependent silent selection, and no correct migration could rely on upstream's specific (unspecified-order) outcome. |
+| #12 — `RegistrationTimeout` per-family propagation gap | **P3** | Upstream's own inconsistency, not something a correct migration could depend on; NEXGov.Mediator's uniform behavior is strictly more protective, never less. |
+| #9 — `Array.Sort` tie-break instability | **P3** | Already classified this way since MED-015; re-confirmed, unchanged. No correct consumer code can rely on unspecified sort-tie behavior. |
+
 ## Gap Ranking
 
 - **P0 (blocks core/source compatibility):** none found. Every family a
   standard request/response + notification + pipeline consumer needs is
   implemented and verified.
-- **P1 (important current MediatR feature):** none remaining — the
-  notification publisher abstraction, formerly the sole P1 item, is
-  fully implemented and verified as of MED-020.
-- **P2 (edge/advanced compatibility):**
-  - Unstable `Array.Sort` tie-break in current MediatR's own `HandlersOrderer` vs. this project's deliberate stable-provider-order tie-break (MED-015) — see Exception Ordering Audit below; classified P2 rather than a defect, since the target itself specifies no stable semantic. **No known P2 functional compatibility gaps remain** as of MED-024 — this is the only surviving P2 item, and it is a documented behavioral-determinism difference, not an unimplemented feature.
-- **P3 (intentionally excluded/non-goal):**
+- **P1 (important current MediatR feature / breaks ordinary migration):**
+  none remaining. **MED-025 found one P1 defect** — pipeline composition
+  did not restore the original cancellation token when a behavior called
+  `next()` with no argument, silently degrading cancellation to `None`
+  for the rest of the pipeline under the exact pattern the live
+  `jasontaylordev/CleanArchitecture` template's own behaviors use — **and
+  fixed it within this task** (see Executive Summary and the Difference
+  Table below). No P1 items remain open.
+- **P2 (edge/advanced compatibility, real but non-core scenario):** none
+  remaining. **MED-025 found one P2 gap** — `NotificationHandler<TNotification>`
+  (public synchronous-handler convenience abstract class) had no
+  NEXGov.Mediator equivalent — and **MED-026 closed it**, re-verified
+  against the exact MED-025-pinned upstream commit (confirmed unchanged
+  on `main` at MED-026 time) and proven to be discovered by existing
+  `AddMediatR` scanning with zero scanner/registration production-code
+  changes. No P2 items remain open.
+- **P3 (edge/optional deviations, and intentionally excluded/non-goal items):**
+  - `Send(object)`'s ambiguous-multiple-`IRequest<TResponse>`-contract handling deliberately differs from current source's silent first-found behavior (MED-025 finding) — documented deviation, not a gap.
+  - `RegistrationTimeout`'s per-family cancellation-propagation gap in current source itself, not replicated (MED-025 finding) — this project is strictly more protective, not less.
+  - Unstable `Array.Sort` tie-break in current MediatR's own `HandlersOrderer` vs. this project's deliberate stable-provider-order tie-break (MED-015) — see Exception Ordering Audit below; classified P3 (re-confirmed by MED-025), since the target itself specifies no stable semantic that any correct consumer could depend on.
   - `LicenseKey` (both locations) and the `ILoggerFactory`/`MediatR.Licensing` dependency current source's `AddRequiredServices` now requires — commercial licensing subsystem.
   - Source generators, AOT-specific redesign.
 
+**No P0, P1, or P2 gaps remain as of MED-026.** One P1 defect (bare
+`next()` cancellation-token loss) was found and fixed within MED-025; one
+P2 gap (`NotificationHandler<TNotification>`) was found in MED-025 and
+closed within MED-026. **A zero P0/P1/P2 count does not by itself
+establish LEVEL 5 ("drop-in") compatibility** — see Compatibility Claim
+below: the remaining P3 items are real, observable, evidence-backed
+differences, not merely theoretical possibilities.
+
 ## Remaining V1 Blockers
 
-None identified. Every P0-classified gap from prior MED tasks is closed
-as of MED-015. The audit found no P0 gaps (see Gap Ranking above), and as
-of MED-020 there are no P1 gaps either — only P2/P3 items remain, none of
-which block the scope this project has consistently targeted (see
-"Recommended V1 Compatibility Promise"). Streaming (MED-019), notification
-publishing (MED-020), `AddOpenBehaviors` (MED-021), generic-family
-expansion (MED-022), unconditional open-to-open registration (MED-023),
-and `AddOpenBehavior`'s nested-generic-response closing pass (MED-024) —
-six former P1/functional-P2 gaps — are all fully closed. **No known P2
-functional compatibility gaps remain** as of MED-024; the sole surviving
-P2 item (the `Array.Sort` tie-break difference) is a documented
-behavioral-determinism difference, not an unimplemented feature.
+None identified. No P0 gaps exist. The one P1 defect MED-025 found
+(cancellation-token loss on a bare `next()` call) was fixed within that
+same task. The one P2 gap MED-025 found (`NotificationHandler<TNotification>`)
+was closed within MED-026. See Release-Blocker Decision and Compatibility
+Claim below for the full reasoning.
+
+## Compatibility Claim
+
+**LEVEL 4 — "Near drop-in replacement with documented exclusions/deviations."**
+**Reassessed explicitly at MED-026 completion, not auto-promoted from
+LEVEL 4 merely because the P0/P1/P2 counts reached zero.**
+
+Justification: the core request/response, notification, pipeline-behavior,
+pre/post-processor, exception-handler/action, streaming, and DI-registration
+surface (including every generic-closing mechanism current source itself
+drives, and now `NotificationHandler<TNotification>`) is fully implemented
+and verified against a pinned current-source commit, not merely against
+memory or older documentation. The project's own flagship acceptance
+scenario — the current `jasontaylordev/CleanArchitecture` template's
+actual `AddMediatR` usage — compiles and behaves correctly end to end,
+including the cancellation-forwarding defect MED-025 found and fixed
+specifically because that template's behaviors trigger it. What keeps
+this at LEVEL 4 rather than LEVEL 5 ("drop-in") **even with zero known
+P0/P1/P2 gaps**: three real, documented, evidence-backed P3 differences
+remain observable to a consumer who exercises the specific shapes they
+cover — `Send(object)`'s ambiguous multi-`IRequest<TResponse>`-contract
+handling (deliberately throws instead of upstream's silent first-found
+selection), the `RegistrationTimeout` per-family propagation difference
+(this project is uniformly protective; upstream is not), and the
+long-standing exception-handler tie-break determinism difference — plus
+the permanently-excluded commercial-licensing subsystem (by design, not a
+gap, but still an observable API-availability difference for a consumer
+who relies on `LicenseKey`). None of these affect the documented core
+subset or the CleanArchitecture-style migration this project was built
+around; a consumer whose usage stays within that documented subset
+experiences a namespace-only change (`using MediatR;` → `using
+NEXGov.Mediator;`) with no other code changes required. LEVEL 5 is
+reserved for a claim of **zero known observable differences of any kind**
+against current upstream, not merely zero *missing functional features* —
+this audit has three P3 differences on record, so LEVEL 5 is not
+justified regardless of the P0/P1/P2 count.
+
+## Release-Blocker Decision
+
+- **Are there any P0 gaps?** No.
+- **Are there any P1 gaps?** No — one was found (cancellation-token loss
+  on a bare `next()` call) and fixed within MED-025 itself; none remain
+  open.
+- **Are there any P2 missing functional features?** No — one was found
+  (`NotificationHandler<TNotification>`) in MED-025 and closed within
+  MED-026, re-verified against the pinned upstream commit and proven to
+  work through real `AddMediatR` scanning and `Publish` execution, not
+  merely to compile.
+- **Are remaining differences only documented deviations/exclusions?**
+  Yes: the `Send(object)` ambiguity handling difference, the
+  `RegistrationTimeout` per-family propagation difference, the
+  `Array.Sort` tie-break difference, and commercial licensing are all
+  documented, evidence-backed, deliberate (or, for licensing, permanently
+  out-of-scope) — none are undocumented surprises.
+- **Is NEXGov.Mediator technically ready for 1.0.0?** **Yes**, for the V1
+  compatibility promise this project has consistently, deliberately
+  targeted (see Recommended V1 Compatibility Promise below) — passing
+  tests alone is not the basis for this conclusion; the basis is: zero P0
+  gaps, zero P1 gaps, zero P2 gaps (all three categories independently
+  verified against a pinned current-upstream commit, not merely inferred
+  from passing tests), the flagship CleanArchitecture migration scenario
+  verified end to end against live current-upstream source including the
+  defect MED-025 specifically uncovered, and every remaining P3
+  difference explicitly documented with evidence and severity. Zero P2
+  gaps does **not** upgrade the claim to LEVEL 5 — see Compatibility
+  Claim above.
 
 ## Post-V1 / Optional Features
 
 - Commercial licensing (permanently out of scope, not deferred).
+- NuGet symbol package (`.snupkg`) / SourceLink debugging metadata — packaging polish, not a MediatR compatibility gap (see Package Audit in the MED-025 and MED-026 completion reports).
 
 ## Recommended Next Tasks
 
@@ -302,6 +500,7 @@ full rationale; task list:
 - ~~**MED-021** — `AddOpenBehaviors`/`OpenBehavior` Batch Registration Compatibility~~ — done.
 - ~~**MED-022** — Generic Family Expansion (notification/exception/processor/stream handler `RegisterGenericHandlers` support)~~ — done; also surfaced two new P2 gaps (unconditional open-to-open generic registration for notification/exception/processor families; `AddOpenBehavior`'s nested-generic-response closing pass), tracked above.
 - ~~**MED-023** — Unconditional Open-to-Open Generic Registration Compatibility (`INotificationHandler<>`/`IRequestExceptionHandler<,,>`/`IRequestExceptionAction<,>`/`IRequestPreProcessor<>`/`IRequestPostProcessor<,>`, independent of `RegisterGenericHandlers`)~~ — done; closes the first of MED-022's two newly-discovered gaps.
-- ~~**MED-024** — `AddOpenBehavior` Nested-Generic-Response Closing Compatibility (`RegisterClosedBehaviorsFromAssemblies`)~~ — done; closes the second of MED-022's two newly-discovered gaps, and the sole remaining functional (P2) compatibility gap tracked by this audit. No known P2 functional compatibility gaps remain.
-- **MED-025** — Release Readiness (package version/authors/repository metadata, symbol packages)
-- **MED-026** — Final Compatibility Audit
+- ~~**MED-024** — `AddOpenBehavior` Nested-Generic-Response Closing Compatibility (`RegisterClosedBehaviorsFromAssemblies`)~~ — done; closes the second of MED-022's two newly-discovered gaps.
+- ~~**MED-025** — Final MediatR Compatibility Audit~~ — done; independently re-verified the entire project against a pinned current-upstream commit, found and fixed one P1 defect (cancellation-token loss on bare `next()`), found one new P2 gap (`NotificationHandler<TNotification>`), and corrected several stale/imprecise prior claims (package metadata, licensing-requirement timing). Assigned Compatibility LEVEL 4.
+- ~~**MED-026** — `NotificationHandler<TNotification>` Compatibility~~ — done (this document reflects the outcome); closed the sole remaining P2 gap MED-025 found, re-verified against the exact MED-025-pinned upstream commit (confirmed unchanged on `main`), proved automatic `AddMediatR` discovery with zero scanner/registration production-code changes, and explicitly reassessed the Compatibility Claim (remains LEVEL 4 — see Compatibility Claim above; a zero P0/P1/P2 count did not by itself justify LEVEL 5).
+- **Recommended follow-up (not started, optional):** Release Readiness (`.snupkg` symbol package, SourceLink) — packaging polish only, not a MediatR compatibility gap; no compatibility-audit task is currently recommended, since P0/P1/P2 are all zero and every remaining P3 item is intentional/documented.

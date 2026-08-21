@@ -635,6 +635,70 @@ independently of) `GenericHandlerRegistrar` above.
   stream handlers, which current source's own participating-family list
   excludes.
 
+## Nested-generic-response behavior closing principles
+
+Introduced in MED-024, via the internal `ClosedBehaviorRegistrar`, called
+once from `ServiceRegistrar.AddRequiredServices` in place of the plain
+`BehaviorsToRegister` foreach loop it replaces. A fourth, independent
+generic-closing mechanism alongside `GenericHandlerRegistrar` and
+`OpenGenericHandlerRegistrar` above — sharing no code and no candidate
+pool with either.
+
+- **Exists because Microsoft.Extensions.DependencyInjection's own native
+  open-generic closing cannot resolve this one specific shape.** An open
+  behavior like `Behavior<TRequest, TValue> : IPipelineBehavior<TRequest,
+  Result<TValue>>` has a response position that is itself a constructed
+  generic type, not a raw type parameter — MS.DI's positional
+  substitution has no way to work backward from a requested closed
+  service `IPipelineBehavior<Ping, Result<string>>` to the right `TValue`
+  for this implementation. Registering the missing closed descriptors
+  explicitly, at `AddMediatR` time, is the only way to make this shape
+  resolve at all.
+- **Discovery happens once, at registration time, over already-known
+  concrete types — never at runtime, never cached per-request.** The
+  mechanism scans `AssembliesToRegister` for concrete `IRequest<TResponse>`
+  implementations exactly once per `AddMediatR` call (memoized across
+  every triggering `BehaviorsToRegister` entry within that call, not
+  re-scanned per entry) and generates a fixed, final set of
+  `ServiceDescriptor`s. Nothing about request dispatch itself changes;
+  `Mediator`/`RequestHandlerWrapper` remain completely unaware this
+  mechanism exists — a resolved closed behavior is indistinguishable from
+  one a consumer registered by hand.
+- **Structural unification, not candidate enumeration.** Unlike
+  `GenericHandlerRegistrar`, which enumerates constraint-satisfying
+  candidates per type parameter, this mechanism works backward from
+  already-known concrete `(request, response)` pairs: it recursively
+  matches the behavior's own declared `IPipelineBehavior<TRequest,
+  TResponse>` shape (expressed in the behavior's own type parameters)
+  against each pair, binding parameters as they're encountered. This is
+  what lets it handle arbitrary nesting depth and repeated parameter
+  positions for free, with no special-casing for either.
+- **A separate mechanism from `GenericHandlerRegistrar`, deliberately not
+  merged into it.** The two solve different problems (closing an
+  open-generic *handler* against constraint-satisfying candidates, vs.
+  closing an open-generic *behavior* against already-concrete
+  request/response pairs) via genuinely different algorithms (per-parameter
+  candidate scanning vs. bidirectional structural unification). Keeping
+  them separate, as current source itself does, avoids forcing one
+  algorithm to awkwardly emulate the other.
+- **Deliberate safety deviation: the bare open registration is
+  intentionally omitted for a triggering entry.** Current source always
+  registers the open behavior itself alongside its generated closed ones.
+  This project omits the open registration whenever the nested-generic
+  check fires, because that registration is empirically either
+  permanently inert or actively crash-inducing (an uncaught
+  `ArgumentException` from Microsoft.Extensions.DependencyInjection's own
+  `ConstructorCallSite`, thrown at resolution time, not registration
+  time) — consistent with this project's established policy (MED-013,
+  MED-022) of recognizing a verified crash-prone shape ahead of time and
+  avoiding it, rather than faithfully reproducing a crash.
+- **DI still owns every generated instance.** A generated closed
+  registration carries the specific `AddOpenBehavior`/`AddBehavior`
+  call's own lifetime and is resolved exactly like any other pipeline
+  behavior — scoped dependencies behave identically, and cancellation
+  tokens flow through `next(cancellationToken)` unmodified, exactly as
+  for a manually-registered closed behavior.
+
 ## Streaming contract principles
 
 MED-017 introduced the streaming pipeline **contracts**. MED-018 added

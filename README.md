@@ -210,13 +210,21 @@ type itself, e.g. `Handler<T> : INotificationHandler<T>`); a wrapped
 mapping (e.g. `INotificationHandler<Envelope<T>>`) needs
 `RegisterGenericHandlers` instead.
 
+A fourth, independent mechanism handles the remaining case neither of the
+above covers: an `AddOpenBehavior`-registered pipeline behavior whose own
+response type is itself a nested generic (e.g. `Behavior<TRequest,
+TValue> : IPipelineBehavior<TRequest, Result<TValue>>`) is closed
+automatically by scanning `AssembliesToRegister` for matching concrete
+`IRequest<TResponse>` implementations — a shape
+Microsoft.Extensions.DependencyInjection's own native generic closing
+cannot resolve on its own.
+
 See [`docs/COMPATIBILITY.md`](./docs/COMPATIBILITY.md) for the exact
-constraint/limit/timeout/arity semantics of both mechanisms — several of
-them replicate genuinely surprising, verified current-MediatR behavior —
-and [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md) for
-the one remaining, distinct, still-open compatibility gap neither
-mechanism covers: `AddOpenBehavior`'s nested-generic-response closing
-pass.
+constraint/limit/timeout/arity semantics of all three mechanisms —
+several of them replicate genuinely surprising, verified current-MediatR
+behavior — and [`docs/COMPATIBILITY-AUDIT.md`](./docs/COMPATIBILITY-AUDIT.md)
+for the point-in-time gap analysis (no known P2 functional compatibility
+gaps remain as of MED-024).
 
 ## Compatibility goal
 
@@ -285,9 +293,10 @@ is used as a compatibility reference.
 - [x] Unconditional open-to-open generic registration (MED-023, a
       mechanism distinct from `RegisterGenericHandlers` — notification
       handlers, exception handlers/actions, and, when
-      `AutoRegisterRequestProcessors` is `true`, pre/post processors — see
-      `docs/COMPATIBILITY-AUDIT.md` for the one remaining, unrelated gap
-      neither generic-registration mechanism covers)
+      `AutoRegisterRequestProcessors` is `true`, pre/post processors)
+- [x] `AddOpenBehavior` nested-generic-response closing (MED-024, a
+      fourth, independent mechanism — closes the last known P2 functional
+      compatibility gap; see `docs/COMPATIBILITY-AUDIT.md`)
 - [x] Void-request `Unit` typing and current handler-proximity exception
       ordering
 - [x] Streaming requests (`IStreamRequest<TResponse>`, `IStreamRequestHandler<,>`,

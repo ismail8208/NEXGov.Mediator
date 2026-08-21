@@ -127,10 +127,14 @@ internal static class ServiceRegistrar
             services.TryAddEnumerable(configuration.RequestPostProcessorsToRegister);
         }
 
-        foreach (var descriptor in configuration.BehaviorsToRegister)
-        {
-            services.TryAddEnumerable(descriptor);
-        }
+        // Registers every BehaviorsToRegister entry and, immediately after any entry whose
+        // declared response is itself a nested generic type (e.g. Result<T>) — a shape
+        // Microsoft.Extensions.DependencyInjection's own native open-generic closing cannot
+        // resolve correctly — generates the missing explicit closed registrations for it. A
+        // fourth, independent mechanism from ordinary closed scanning, GenericHandlerRegistrar
+        // (MED-013/022), and OpenGenericHandlerRegistrar (MED-023) — see ClosedBehaviorRegistrar
+        // for the algorithm and why the two steps must stay interleaved per entry (MED-024).
+        ClosedBehaviorRegistrar.RegisterAll(services, configuration);
 
         foreach (var descriptor in configuration.StreamBehaviorsToRegister)
         {

@@ -7,7 +7,7 @@ namespace NEXGov.Mediator.IntegrationTests;
 // currently-verified MediatR registration shape from the Jason Taylor
 // CleanArchitecture template (see docs/COMPATIBILITY-AUDIT.md's
 // "CleanArchitecture Migration Status") works unchanged against
-// NEXGov.Mediator, using ONLY services.AddMediatR + Send/Publish — no
+// NEXGov.Mediator, using ONLY services.AddNEXMediator + Send/Publish — no
 // manual mediator or handler registration anywhere in this test.
 public class CleanArchitectureStyleMigrationTests
 {

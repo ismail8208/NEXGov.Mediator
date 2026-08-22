@@ -5,7 +5,7 @@ All notable changes to **NEXMediator** — distributed as the
 Versioning follows [Semantic Versioning](https://semver.org/) — see the
 README's Versioning section for the policy.
 
-## [1.0.0]
+## [1.0.0] - 2026-08-21
 
 Initial public release of **NEXMediator**: an independent .NET mediator
 and CQRS library that establishes a strong MediatR compatibility baseline

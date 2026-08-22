@@ -19,6 +19,10 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <!-- MED-031: canonical repository URL, confirmed via `git remote -v`
+         (matches the SourceLink repository below and PublishRepositoryUrl's
+         own auto-derived RepositoryUrl). -->
+    <PackageProjectUrl>https://github.com/ismail8208/NEXGov.Mediator</PackageProjectUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- MED-028: symbol package for step-through debugging of the published

@@ -354,6 +354,22 @@ NEXGov.Mediator follows [Semantic Versioning](https://semver.org/):
 The package version is declared once, in `Directory.Build.props`, and
 applies to the whole repository.
 
+### Official release artifacts
+
+Official `NEXGov.Mediator` NuGet packages must be produced by the project's
+CI Release build (`.github/workflows/ci.yml`'s `Pack NEXGov.Mediator
+(Release)` step), not by an uncontrolled local `dotnet pack`. The CI
+environment sets `GITHUB_ACTIONS=true`, which turns on
+`ContinuousIntegrationBuild` (see `Directory.Build.props`) and maps the
+portable PDB's embedded source paths to deterministic `/_/`-prefixed paths.
+An ordinary local pack instead embeds the real local machine path in the
+PDB's document table — harmless for local debugging, but not what should
+ship in a published package.
+
+## License
+
+NEXMediator is distributed under the [MIT License](./LICENSE).
+
 ## Repository structure
 
 ```
